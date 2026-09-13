@@ -1,0 +1,20 @@
+# Ignore dependencies and virtual environments
+**/node_modules
+**/.venv
+**/venv
+**/env
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+
+# Ignore git and agent configs
+.git
+.agents
+.vscode
+.idea
+
+# Ignore temporary and test cache
+*.tmp
+*.log
+cmpdi-ai-reporting/backend/storage/reports/Report_*
+cmpdi-ai-reporting/frontend/dist
