@@ -1,5 +1,19 @@
 [
   {
+    "text": "CIL",
+    "value": 95,
+    "category": "subsidiaries",
+    "occurrences": 350,
+    "citations": 14
+  },
+  {
+    "text": "Project",
+    "value": 90,
+    "category": "domain_vocabulary",
+    "occurrences": 451,
+    "citations": 13
+  },
+  {
     "text": "ECL",
     "value": 92,
     "category": "subsidiaries",
@@ -11,6 +25,27 @@
     "value": 90,
     "category": "subsidiaries",
     "occurrences": 364,
+    "citations": 13
+  },
+  {
+    "text": "Block",
+    "value": 88,
+    "category": "geological_terms",
+    "occurrences": 170,
+    "citations": 13
+  },
+  {
+    "text": "Lignite",
+    "value": 88,
+    "category": "domain_vocabulary",
+    "occurrences": 164,
+    "citations": 13
+  },
+  {
+    "text": "Power",
+    "value": 86,
+    "category": "domain_vocabulary",
+    "occurrences": 162,
     "citations": 13
   },
   {
@@ -56,6 +91,13 @@
     "citations": 10
   },
   {
+    "text": "Dispatch",
+    "value": 88,
+    "category": "mining_metrics",
+    "occurrences": 94,
+    "citations": 10
+  },
+  {
     "text": "BCCL",
     "value": 88,
     "category": "subsidiaries",
@@ -70,11 +112,60 @@
     "citations": 9
   },
   {
+    "text": "Coking Coal",
+    "value": 84,
+    "category": "domain_vocabulary",
+    "occurrences": 34,
+    "citations": 9
+  },
+  {
     "text": "Gevra",
     "value": 88,
     "category": "domain_vocabulary",
     "occurrences": 17,
     "citations": 9
+  },
+  {
+    "text": "Reserve",
+    "value": 89,
+    "category": "mining_metrics",
+    "occurrences": 48,
+    "citations": 5
+  },
+  {
+    "text": "Mining",
+    "value": 95,
+    "category": "domain_vocabulary",
+    "occurrences": 438,
+    "citations": 4
+  },
+  {
+    "text": "Infrastructure",
+    "value": 85,
+    "category": "domain_vocabulary",
+    "occurrences": 50,
+    "citations": 4
+  },
+  {
+    "text": "Monitoring",
+    "value": 82,
+    "category": "domain_vocabulary",
+    "occurrences": 47,
+    "citations": 4
+  },
+  {
+    "text": "Survey",
+    "value": 82,
+    "category": "domain_vocabulary",
+    "occurrences": 29,
+    "citations": 4
+  },
+  {
+    "text": "Handling",
+    "value": 78,
+    "category": "domain_vocabulary",
+    "occurrences": 16,
+    "citations": 4
   },
   {
     "text": "Washery",
@@ -84,10 +175,31 @@
     "citations": 4
   },
   {
+    "text": "Environment",
+    "value": 84,
+    "category": "domain_vocabulary",
+    "occurrences": 47,
+    "citations": 3
+  },
+  {
+    "text": "Safety",
+    "value": 83,
+    "category": "domain_vocabulary",
+    "occurrences": 34,
+    "citations": 3
+  },
+  {
     "text": "Exploration",
     "value": 92,
     "category": "domain_vocabulary",
     "occurrences": 27,
+    "citations": 3
+  },
+  {
+    "text": "Reclamation",
+    "value": 81,
+    "category": "domain_vocabulary",
+    "occurrences": 25,
     "citations": 3
   },
   {
@@ -112,17 +224,129 @@
     "citations": 3
   },
   {
-    "text": "HEMM",
-    "value": 79,
+    "text": "Drilling",
+    "value": 90,
     "category": "domain_vocabulary",
+    "occurrences": 12,
+    "citations": 3
+  },
+  {
+    "text": "Mine Plan",
+    "value": 86,
+    "category": "domain_vocabulary",
+    "occurrences": 10,
+    "citations": 3
+  },
+  {
+    "text": "Afforestation",
+    "value": 78,
+    "category": "domain_vocabulary",
+    "occurrences": 7,
+    "citations": 3
+  },
+  {
+    "text": "Stock",
+    "value": 78,
+    "category": "mining_metrics",
+    "occurrences": 6,
+    "citations": 3
+  },
+  {
+    "text": "HEMM",
+    "value": 85,
+    "category": "mining_metrics",
     "occurrences": 5,
     "citations": 3
+  },
+  {
+    "text": "Continuous Miner",
+    "value": 83,
+    "category": "mining_metrics",
+    "occurrences": 5,
+    "citations": 3
+  },
+  {
+    "text": "Siding",
+    "value": 77,
+    "category": "mining_metrics",
+    "occurrences": 5,
+    "citations": 3
+  },
+  {
+    "text": "Seam",
+    "value": 90,
+    "category": "geological_terms",
+    "occurrences": 40,
+    "citations": 2
+  },
+  {
+    "text": "Geological Report",
+    "value": 89,
+    "category": "domain_vocabulary",
+    "occurrences": 12,
+    "citations": 2
+  },
+  {
+    "text": "Excavation",
+    "value": 80,
+    "category": "mining_metrics",
+    "occurrences": 10,
+    "citations": 2
+  },
+  {
+    "text": "DGMS",
+    "value": 84,
+    "category": "domain_vocabulary",
+    "occurrences": 10,
+    "citations": 2
+  },
+  {
+    "text": "Thermal",
+    "value": 80,
+    "category": "domain_vocabulary",
+    "occurrences": 10,
+    "citations": 2
   },
   {
     "text": "Borehole",
     "value": 85,
     "category": "geological_terms",
     "occurrences": 8,
+    "citations": 2
+  },
+  {
+    "text": "Blasting",
+    "value": 79,
+    "category": "mining_metrics",
+    "occurrences": 8,
+    "citations": 2
+  },
+  {
+    "text": "Singrauli",
+    "value": 88,
+    "category": "geological_terms",
+    "occurrences": 6,
+    "citations": 2
+  },
+  {
+    "text": "Quarry",
+    "value": 78,
+    "category": "mining_metrics",
+    "occurrences": 6,
+    "citations": 2
+  },
+  {
+    "text": "Beneficiation",
+    "value": 83,
+    "category": "domain_vocabulary",
+    "occurrences": 5,
+    "citations": 2
+  },
+  {
+    "text": "Strata",
+    "value": 77,
+    "category": "geological_terms",
+    "occurrences": 4,
     "citations": 2
   },
   {
@@ -133,6 +357,20 @@
     "citations": 2
   },
   {
+    "text": "Haul Road",
+    "value": 76,
+    "category": "mining_metrics",
+    "occurrences": 4,
+    "citations": 2
+  },
+  {
+    "text": "Sediment",
+    "value": 76,
+    "category": "geological_terms",
+    "occurrences": 2,
+    "citations": 2
+  },
+  {
     "text": "Jharia",
     "value": 89,
     "category": "geological_terms",
@@ -140,8 +378,29 @@
     "citations": 1
   },
   {
+    "text": "DPR",
+    "value": 85,
+    "category": "domain_vocabulary",
+    "occurrences": 6,
+    "citations": 1
+  },
+  {
     "text": "Dumper",
     "value": 80,
+    "category": "domain_vocabulary",
+    "occurrences": 3,
+    "citations": 1
+  },
+  {
+    "text": "Non-Coking Coal",
+    "value": 85,
+    "category": "domain_vocabulary",
+    "occurrences": 3,
+    "citations": 1
+  },
+  {
+    "text": "Slope Stability",
+    "value": 79,
     "category": "domain_vocabulary",
     "occurrences": 3,
     "citations": 1
@@ -161,7 +420,35 @@
     "citations": 1
   },
   {
+    "text": "Korba",
+    "value": 86,
+    "category": "geological_terms",
+    "occurrences": 1,
+    "citations": 1
+  },
+  {
+    "text": "Hydrology",
+    "value": 75,
+    "category": "geological_terms",
+    "occurrences": 1,
+    "citations": 1
+  },
+  {
     "text": "Kusmunda",
+    "value": 87,
+    "category": "domain_vocabulary",
+    "occurrences": 1,
+    "citations": 1
+  },
+  {
+    "text": "Feasibility Study",
+    "value": 84,
+    "category": "domain_vocabulary",
+    "occurrences": 1,
+    "citations": 1
+  },
+  {
+    "text": "Reserve Estimation",
     "value": 87,
     "category": "domain_vocabulary",
     "occurrences": 1,
