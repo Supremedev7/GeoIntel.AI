@@ -77,7 +77,12 @@
 
 ## ⚡ Quick Start & Run
 
-### Option 1: Single-Command Docker Deployment (Recommended)
+### Option 1: 1-Click Cloud Deployment (Render.com)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Supremedev7/GeoIntel.AI)
+
+Click the badge above to automatically launch GeoIntel.AI using the verified [`render.yaml`](./render.yaml) blueprint.
+
+### Option 2: Single-Command Docker Deployment (Local / Self-Hosted)
 ```bash
 # Clone the repository
 git clone https://github.com/Supremedev7/GeoIntel.AI.git
@@ -89,7 +94,7 @@ docker compose up -d
 # Open in browser: http://localhost:8000
 ```
 
-### Option 2: Local Development
+### Option 3: Local Development
 **Prerequisites:** Python 3.10+, Node.js 18+, Tesseract OCR
 ```bash
 # Clone the repository
