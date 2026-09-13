@@ -16,6 +16,12 @@
   *Strictly adheres to official guidelines: 6 slides, concise points, rich architecture diagrams, and real application screenshots.*
 - **Official Presentation (PDF):** [`SIH2026_GeoIntel_Core_Data_Miners.pdf`](./SIH2026_GeoIntel_Core_Data_Miners.pdf)  
   *Print-ready 16:9 widescreen format required for portal submission.*
+- **Detailed 6-Slide Technical Script:** [`docs/SIH_Presentation_Content.md`](./docs/SIH_Presentation_Content.md)  
+  *Verbatim, grounded technical content mapped to Ministry of Coal PS-26023.*
+- **Production Deployment Blueprint:** [`docs/HOSTING_GUIDE.md`](./docs/HOSTING_GUIDE.md)  
+  *One-click guides for Render, Railway, Hugging Face Spaces, and Docker VPS.*
+- **Napkin AI Visual Diagram Prompts:** [`docs/Napkin_AI_Diagram_Prompts.md`](./docs/Napkin_AI_Diagram_Prompts.md)  
+  *Ready-to-use prompt descriptions for generating diagrams and system schemas.*
 
 ---
 
