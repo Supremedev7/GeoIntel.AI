@@ -32,6 +32,9 @@ Thumbs.db
 .~lock.*
 *.tmp
 
-# Storage Cache
+# Storage Cache & Generated Reports
 cmpdi-ai-reporting/backend/storage/chroma/
 cmpdi-ai-reporting/backend/storage/analytics_cache.json
+cmpdi-ai-reporting/backend/storage/reports/Report_*
+backend/storage/reports/Report_*
+screenshots/
