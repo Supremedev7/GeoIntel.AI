@@ -5,6 +5,10 @@ import html
 import time
 import json
 import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("report_generator")
+
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
@@ -44,23 +48,11 @@ except ImportError:
     ENTAILMENT_AVAILABLE = False
     logger.warning("Entailment dependencies not available. Install transformers and torch for hallucination detection.")
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("report_generator")
-
 STORAGE_DIR = Path(__file__).resolve().parent / "storage"
 REPORTS_DIR = STORAGE_DIR / "reports"
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-SUBSIDIARY_DATA = {
-    "MCL": {"name": "Mahanadi Coalfields Ltd", "oc": 181.50, "ug": 11.80, "total": 193.30, "target": 190.00, "growth": "+11.9%", "basin": "Talcher / Ib Valley (Odisha)", "sr": "1.18 m³/t"},
-    "SECL": {"name": "South Eastern Coalfields Ltd", "oc": 155.80, "ug": 11.20, "total": 167.00, "target": 170.00, "growth": "+13.2%", "basin": "Korba / Mand-Raigarh (Chhattisgarh)", "sr": "2.35 m³/t"},
-    "NCL": {"name": "Northern Coalfields Ltd", "oc": 131.00, "ug": 0.00, "total": 131.00, "target": 131.00, "growth": "+6.8%", "basin": "Singrauli / Moher (MP/UP)", "sr": "3.10 m³/t"},
-    "CCL": {"name": "Central Coalfields Ltd", "oc": 82.90, "ug": 1.10, "total": 84.00, "target": 84.00, "growth": "+14.2%", "basin": "North & South Karanpura (Jharkhand)", "sr": "2.85 m³/t"},
-    "WCL": {"name": "Western Coalfields Ltd", "oc": 57.10, "ug": 3.20, "total": 60.30, "target": 62.00, "growth": "+4.5%", "basin": "Wardha Valley / Umrer (Maharashtra)", "sr": "4.21 m³/t"},
-    "BCCL": {"name": "Bharat Coking Coal Ltd", "oc": 39.80, "ug": 1.30, "total": 41.10, "target": 41.00, "growth": "+17.4%", "basin": "Jharia Coalfield (Jharkhand)", "sr": "3.85 m³/t"},
-    "ECL": {"name": "Eastern Coalfields Ltd", "oc": 25.90, "ug": 9.20, "total": 35.10, "target": 37.00, "growth": "+4.8%", "basin": "Raniganj / Rajmahal (WB/Jharkhand)", "sr": "3.40 m³/t"},
-    "CMPDI": {"name": "Central Mine Planning & Design Institute", "oc": 0.0, "ug": 0.0, "total": 0.0, "target": 0.0, "growth": "N/A", "basin": "Ranchi HQ & 7 Regional Institutes", "sr": "Geological Exploration"}
-}
+from subsidiary_data import SUBSIDIARY_DATA
 
 def sanitize_for_reportlab(text: str) -> str:
     """Safely escape text and convert standard markdown tags for ReportLab XML parser."""

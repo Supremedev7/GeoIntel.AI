@@ -28,6 +28,7 @@ cmpdi-ai-reporting/frontend/dist/
 Thumbs.db
 .vscode/
 .idea/
+.agents/
 .~lock.*
 *.tmp
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   FileText, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, 
-  ChevronRight, Download, Eye, Layers, ShieldCheck, MapPin
+  ChevronRight, Download, Eye, Layers, ShieldCheck, MapPin,
+  Maximize2
 } from 'lucide-react';
 
 export default function PDFHighlightViewer({
@@ -15,6 +16,7 @@ export default function PDFHighlightViewer({
   const [currentPage, setCurrentPage] = useState(activeCitation?.page_number ? Number(activeCitation.page_number) : 1);
   const [totalPages, setTotalPages] = useState(1);
   const [zoom, setZoom] = useState(100);
+  const [isFitWidth, setIsFitWidth] = useState(false);
   const [pageSize, setPageSize] = useState({ width: 612, height: 792 });
   const [viewMode, setViewMode] = useState('overlay'); // 'overlay' or 'native'
   const [imageLoading, setImageLoading] = useState(true);
@@ -118,97 +120,138 @@ export default function PDFHighlightViewer({
   const highlightStyle = getHighlightStyle();
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+    <div id="tour-pdf-viewer" className="flex flex-col h-full bg-surface-1 border border-border rounded-2xl overflow-hidden shadow-2xl">
       {/* Top Controls Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-slate-950/80 border-b border-slate-800 text-xs">
-        <div className="flex items-center gap-2 max-w-[45%]">
-          <FileText className="w-4 h-4 text-blue-400 shrink-0" />
-          <select
-            value={activeDoc}
-            onChange={(e) => {
-              if (onFileChange) onFileChange(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="bg-slate-800 text-slate-200 border border-slate-700 rounded px-2 py-1 truncate focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            {availableFiles.map((doc, idx) => {
-              const fname = typeof doc === 'string' ? doc : (doc?.filename || `Document_${idx}`);
-              return (
-                <option key={fname || idx} value={fname}>
-                  {fname}
-                </option>
-              );
-            })}
-          </select>
+      <div className="flex items-center justify-between px-4 py-2.5 bg-surface-1 border-b border-border text-xs">
+        <div className="flex items-center gap-2 min-w-0 max-w-[55%]">
+          <div className="p-1.5 rounded-md bg-info/10 border border-info/20 text-info shrink-0">
+            <FileText className="w-4 h-4" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="font-semibold text-text-primary text-xs truncate" title={activeDoc}>
+              {activeDoc}
+            </span>
+            <span className="text-[10px] text-text-tertiary">
+              Source Document &bull; {totalPages} {totalPages === 1 ? 'Page' : 'Pages'}
+            </span>
+          </div>
         </div>
 
         {/* Page & Zoom Controls */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => changePage(currentPage - 1)}
-            className="p-1 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1 rounded hover:bg-surface-2 text-text-secondary disabled:opacity-30 disabled:cursor-not-allowed"
             disabled={currentPage <= 1}
             title="Previous Page"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-slate-300 font-mono px-1">
+          <span className="text-text-secondary font-mono px-1">
             Page {currentPage} of {totalPages}
           </span>
           <button
             onClick={() => changePage(currentPage + 1)}
-            className="p-1 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1 rounded hover:bg-surface-2 text-text-secondary disabled:opacity-30 disabled:cursor-not-allowed"
             disabled={currentPage >= totalPages}
             title="Next Page"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
 
-          <div className="h-4 w-[1px] bg-slate-700 mx-1" />
+          <div className="h-4 w-[1px] bg-surface-3 mx-1" />
 
-          <button
-            onClick={() => setZoom((z) => Math.max(50, z - 15))}
-            className="p-1 rounded hover:bg-slate-800 text-slate-300"
-            title="Zoom Out"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <span className="text-slate-400 font-mono text-[11px] w-8 text-center">{zoom}%</span>
-          <button
-            onClick={() => setZoom((z) => Math.min(180, z + 15))}
-            className="p-1 rounded hover:bg-slate-800 text-slate-300"
-            title="Zoom In"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setZoom(100)}
-            className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200"
-            title="Reset Zoom"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
+          {/* Enhanced Zoom Controls */}
+          <div className="flex items-center gap-0.5 bg-surface-2/60 p-0.5 rounded-lg border border-border">
+            <button
+              onClick={() => {
+                setIsFitWidth(false);
+                setZoom((z) => Math.max(65, z - 15));
+              }}
+              disabled={zoom <= 65 && !isFitWidth}
+              className="p-1 rounded hover:bg-surface-2 text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              title="Zoom Out"
+              aria-label="Zoom Out"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            
+            <button
+              onClick={() => {
+                setIsFitWidth(false);
+                setZoom(100);
+              }}
+              className={`px-1.5 py-0.5 rounded text-[11px] font-mono font-medium transition-colors cursor-pointer ${
+                zoom === 100 && !isFitWidth ? 'text-accent font-bold bg-surface-0 shadow-xs' : 'text-text-tertiary hover:text-text-primary'
+              }`}
+              title="Reset to 100%"
+            >
+              {isFitWidth ? "Fit" : `${zoom}%`}
+            </button>
 
-          <div className="h-4 w-[1px] bg-slate-700 mx-1" />
+            <button
+              onClick={() => {
+                setIsFitWidth(false);
+                setZoom((z) => Math.min(150, z + 15));
+              }}
+              disabled={zoom >= 150 && !isFitWidth}
+              className="p-1 rounded hover:bg-surface-2 text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              title="Zoom In"
+              aria-label="Zoom In"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="h-3.5 w-[1px] bg-surface-3 mx-0.5" />
+
+            <button
+              onClick={() => setIsFitWidth((prev) => !prev)}
+              className={`p-1 rounded transition-colors cursor-pointer ${
+                isFitWidth 
+                  ? 'bg-accent text-white shadow-xs' 
+                  : 'text-text-tertiary hover:text-text-primary hover:bg-surface-2'
+              }`}
+              title={isFitWidth ? "Exit Fit to Width" : "Fit to Width"}
+              aria-label="Fit to Width"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="h-4 w-[1px] bg-surface-3 mx-1" />
 
           {/* Toggle view mode */}
-          <button
-            onClick={() => setViewMode(viewMode === 'overlay' ? 'native' : 'overlay')}
-            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
-              viewMode === 'overlay'
-                ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-            title="Switch Between Spatial Overlay & Native Viewer"
-          >
-            {viewMode === 'overlay' ? <Layers className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span>{viewMode === 'overlay' ? 'Spatial View' : 'PDF View'}</span>
-          </button>
+          <div className="flex bg-surface-2 p-0.5 rounded-lg border border-border">
+            <button
+              onClick={() => setViewMode('overlay')}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                viewMode === 'overlay'
+                  ? 'bg-surface-0 text-text-primary shadow-xs'
+                  : 'text-text-tertiary hover:text-text-primary'
+              }`}
+              title="Spatial Overlay Viewer"
+            >
+              <Layers className="w-3 h-3" />
+              <span>Spatial</span>
+            </button>
+            <button
+              onClick={() => setViewMode('native')}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                viewMode === 'native'
+                  ? 'bg-surface-0 text-text-primary shadow-xs'
+                  : 'text-text-tertiary hover:text-text-primary'
+              }`}
+              title="Native PDF Viewer"
+            >
+              <Eye className="w-3 h-3" />
+              <span>PDF</span>
+            </button>
+          </div>
 
           <a
             href={`/api/pdf-raw/${activeDoc}`}
             download
-            className="p-1.5 rounded hover:bg-slate-800 text-slate-300 ml-1"
+            className="p-1.5 rounded hover:bg-surface-2 text-text-secondary ml-1"
             title="Download PDF"
           >
             <Download className="w-3.5 h-3.5" />
@@ -216,40 +259,42 @@ export default function PDFHighlightViewer({
         </div>
       </div>
 
-      {/* Spatial Audit Banner: only active if current page has a citation */}
-      {currentBBox ? (
-        <div className="flex items-center justify-between px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-xs text-amber-200 transition-all">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
-            <span className="font-medium truncate max-w-sm">
-              Source Audit Bounding Box Active &bull; Page {currentPage} of {totalPages}
-            </span>
-          </div>
-          <span className="font-mono text-[10px] text-amber-300/80 bg-amber-900/40 px-2 py-0.5 rounded">
-            [{currentBBox.join(', ')}]
-          </span>
+      {/* Citation Location Sub-Bar */}
+      <div className="flex items-center justify-between px-4 py-1.5 bg-surface-2/40 border-b border-border text-[11px] text-text-tertiary shrink-0">
+        <div className="flex items-center gap-2 truncate">
+          {currentBBox ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber shrink-0" />
+              <span className="font-medium text-text-secondary truncate">
+                Citation Location &bull; Page {currentPage} of {totalPages}
+              </span>
+            </>
+          ) : (
+            <span>Document View &bull; Page {currentPage} of {totalPages}</span>
+          )}
         </div>
-      ) : (
-        <div className="flex items-center justify-between px-3 py-1 bg-slate-950/60 border-b border-slate-800/80 text-[11px] text-slate-400">
-          <span className="truncate">Viewing {activeDoc} &bull; Page {currentPage} of {totalPages}</span>
-          <span className="text-slate-500 text-[10px]">No spatial citation on this page</span>
-        </div>
-      )}
+        <span className="text-[10px] text-text-tertiary font-mono shrink-0">
+          {currentBBox ? "Highlighted Snippet" : "PDF Canvas"}
+        </span>
+      </div>
 
       {/* PDF Content Canvas Container */}
       <div 
         ref={containerRef}
-        className="flex-1 overflow-auto p-4 flex items-start justify-center bg-slate-950/90 relative"
+        className="flex-1 overflow-auto p-4 bg-surface-0 relative w-full h-full text-center"
       >
         {viewMode === 'overlay' ? (
           <div 
-            className="relative shadow-2xl transition-transform duration-150 origin-top bg-white rounded"
-            style={{ width: `${zoom}%`, maxWidth: '900px' }}
+            className="relative shadow-2xl transition-all duration-150 origin-top bg-white rounded inline-block text-left mx-auto"
+            style={{ 
+              width: isFitWidth ? '100%' : `${Math.round(760 * (zoom / 100))}px`,
+              maxWidth: isFitWidth ? '100%' : 'none'
+            }}
           >
             {imageLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 text-slate-300 text-xs gap-2 z-20 py-20">
-                <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                <span>Rasterizing PDF page spatial vectors...</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-0/80 text-text-secondary text-xs gap-2 z-20 py-20">
+                <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                <span>Rendering PDF page view...</span>
               </div>
             )}
 
@@ -266,20 +311,20 @@ export default function PDFHighlightViewer({
               }}
             />
 
-            {/* Spatial Highlight Overlay Box (Dynamically rendered only if this page is cited) */}
+            {/* Spatial Highlight Overlay Box */}
             {highlightStyle && !imageLoading && !imageError && (
               <div
                 style={highlightStyle}
-                className="absolute z-10 bg-amber-400/35 border-2 border-amber-500 rounded-sm pointer-events-none transition-all duration-300 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+                className="absolute z-10 bg-amber/25 border-2 border-amber rounded-sm pointer-events-none transition-all duration-300 animate-pulse shadow-[0_0_12px_rgba(201,138,43,0.4)]"
               >
-                <div className="absolute -top-6 left-0 bg-amber-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow whitespace-nowrap flex items-center gap-1">
-                  <MapPin className="w-2.5 h-2.5" /> Cited Source Snippet (Page {currentPage})
+                <div className="absolute -top-5 left-0 bg-cmpdi-amber text-white text-[9.5px] font-bold px-1.5 py-0.5 rounded shadow whitespace-nowrap flex items-center gap-1">
+                  <MapPin className="w-2.5 h-2.5" /> Cited Source (Page {currentPage})
                 </div>
               </div>
             )}
 
             {imageError && (
-              <div className="p-8 text-center text-slate-400 text-xs">
+              <div className="p-8 text-center text-text-tertiary text-xs">
                 Could not render page image. You can switch to Native PDF View above.
               </div>
             )}
@@ -293,13 +338,13 @@ export default function PDFHighlightViewer({
         )}
       </div>
 
-      {/* Footer Snippet Info Card (Dynamically displayed only when page has a citation) */}
+      {/* Footer Snippet Info Card */}
       {currentSnippet && (
-        <div className="px-4 py-2 bg-slate-950 border-t border-slate-800 text-xs transition-all">
-          <div className="text-slate-400 text-[11px] mb-1 font-semibold flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" /> Grounded Text Ground-Truth (Page {currentPage}):
+        <div className="px-4 py-2 bg-surface-1 border-t border-border text-xs transition-all shrink-0">
+          <div className="text-text-tertiary text-[10.5px] mb-0.5 font-medium flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" /> Cited Source Excerpt (Page {currentPage}):
           </div>
-          <p className="text-slate-300 italic line-clamp-2 bg-slate-900/80 p-1.5 rounded border border-slate-800/80 text-[11px]">
+          <p className="text-text-secondary text-xs leading-relaxed line-clamp-2">
             "{currentSnippet}"
           </p>
         </div>

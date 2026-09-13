@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Key, AlertTriangle, CheckCircle2, RefreshCw, X, ShieldAlert, Zap } from 'lucide-react';
+import { Key, X } from 'lucide-react';
 
-import Header from './components/Header';
+import Sidebar from './components/Sidebar';
 import ChatAssistant from './components/ChatAssistant';
 import PDFHighlightViewer from './components/PDFHighlightViewer';
 import Dashboard from './components/Dashboard';
@@ -10,7 +10,7 @@ import Repository from './components/Repository';
 import OnboardingTour from './components/OnboardingTour';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat', 'dashboard', 'reports', 'documents'
+  const [activeTab, setActiveTab] = useState('chat');
   const [availableFiles, setAvailableFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState('Coal_Ministry_Mine_Plan_Guidelines.pdf');
   const [activePage, setActivePage] = useState(1);
@@ -23,6 +23,7 @@ export default function App() {
     exact_snippet: 'Guidelines for preparation of Mine Plans for Coal and Lignite Blocks'
   });
   const [activeCitations, setActiveCitations] = useState([]);
+  
   const getStoredKey = () => {
     try {
       return localStorage.getItem('groq_api_key') || '';
@@ -32,12 +33,29 @@ export default function App() {
   };
 
   const [apiKey, setApiKey] = useState(getStoredKey());
-  const [showKeyModal, setShowKeyModal] = useState(!getStoredKey());
+  const [showKeyModal, setShowKeyModal] = useState(false);
   const [keyInput, setKeyInput] = useState(getStoredKey());
   const [validatingKey, setValidatingKey] = useState(false);
   const [keyValidationStatus, setKeyValidationStatus] = useState(null);
-
   const [isTourOpen, setIsTourOpen] = useState(false);
+  const [chatInitialQuery, setChatInitialQuery] = useState('');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const fetchDocuments = async () => {
     try {
@@ -153,192 +171,192 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Refactored Clean Header Bar */}
-      <Header
+    <div className="fixed inset-0 h-full w-full overflow-hidden bg-[#EBEEF2] dark:bg-[#0E1217] text-text-primary selection:bg-accent/30 selection:text-white flex">
+      {/* Sidebar Navigation (Borderless & seamless with outer canvas) */}
+      <Sidebar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         documentCount={availableFiles.length}
         apiKey={apiKey}
         onOpenKeyModal={() => setShowKeyModal(true)}
         onStartTour={() => setIsTourOpen(true)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebar}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
-        {/* TAB 1: RAG Q&A Split-Screen with PDF Highlight Viewer */}
-        {activeTab === 'chat' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-140px)] min-h-[620px]">
-            {/* Left Panel: Minimal ChatGPT-style Assistant */}
-            <div className="lg:col-span-5 h-full">
-              <ChatAssistant
-                onSelectCitation={handleSelectCitation}
-                activeCitation={activeCitation}
-                apiKey={apiKey}
-                onOpenKeyModal={() => setShowKeyModal(true)}
-                availableFiles={availableFiles}
-                selectedFile={selectedFile}
-                onFileChange={(f) => {
-                  setSelectedFile(f);
-                  setActivePage(1);
+      {/* Main Content Stage: Sleek Floating Rounded Panel (The "Pages Box") */}
+      <main className="flex-1 flex flex-col min-w-0 h-full p-3 relative z-10 overflow-hidden">
+        <div className="flex-1 overflow-hidden w-full h-full bg-white dark:bg-[#161B22] rounded-2xl md:rounded-[20px] border border-border/80 dark:border-white/[0.06] shadow-2xl shadow-black/5 dark:shadow-black/50 flex flex-col relative">
+          {activeTab === 'chat' && (
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[450px_minmax(0,1fr)] gap-3 md:gap-4 p-3 md:p-4 min-h-0 min-w-0 h-full w-full overflow-hidden">
+              <div className="h-full flex flex-col min-h-0 min-w-0 overflow-hidden">
+                <ChatAssistant
+                  onSelectCitation={handleSelectCitation}
+                  activeCitation={activeCitation}
+                  apiKey={apiKey}
+                  onOpenKeyModal={() => setShowKeyModal(true)}
+                  availableFiles={availableFiles}
+                  selectedFile={selectedFile}
+                  initialQuery={chatInitialQuery}
+                  onClearInitialQuery={() => setChatInitialQuery('')}
+                  onFileChange={(f) => {
+                    setSelectedFile(f);
+                    setActivePage(1);
+                    setActiveBBox(null);
+                    setActiveSnippet('');
+                  }}
+                />
+              </div>
+              <div className="h-full min-h-0 min-w-0 overflow-hidden">
+                <PDFHighlightViewer
+                  selectedFile={selectedFile}
+                  activeCitation={activeCitation}
+                  citations={activeCitations}
+                  availableFiles={availableFiles}
+                  onFileChange={(f) => {
+                    setSelectedFile(f);
+                    setActiveCitation(null);
+                    setActiveCitations([]);
+                    setActiveBBox(null);
+                    setActiveSnippet('');
+                  }}
+                  onPageChange={(p) => setActivePage(p)}
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'dashboard' && (
+            <div className="h-full w-full mx-auto overflow-y-auto p-4 md:p-6 pb-12">
+              <Dashboard 
+                onAuditDocument={(filename, page) => {
+                  setSelectedFile(filename);
+                  setActivePage(page || 1);
                   setActiveBBox(null);
                   setActiveSnippet('');
+                  setActiveTab('chat');
+                }} 
+                onAskAssistant={(queryText) => {
+                  setChatInitialQuery(queryText);
+                  setActiveTab('chat');
                 }}
               />
             </div>
+          )}
 
-            {/* Right Panel: High-Precision PDF Viewer with Bounding-Box Overlay */}
-            <div className="lg:col-span-7 h-full">
-              <PDFHighlightViewer
-                selectedFile={selectedFile}
-                activeCitation={activeCitation}
-                citations={activeCitations}
-                availableFiles={availableFiles}
-                onFileChange={(f) => {
-                  setSelectedFile(f);
-                  setActiveCitation(null);
-                  setActiveCitations([]);
-                  setActiveBBox(null);
-                  setActiveSnippet('');
-                }}
-                onPageChange={(p) => {
-                  setActivePage(p);
-                }}
+          {activeTab === 'reports' && (
+            <div className="h-full w-full mx-auto overflow-y-auto p-4 md:p-6 pb-12">
+              <ReportBuilder 
+                apiKey={apiKey} 
+                availableFiles={availableFiles} 
               />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* TAB 2: Geological Analytics & Word Cloud */}
-        {activeTab === 'dashboard' && (
-          <Dashboard 
-            onAuditDocument={(filename, page) => {
-              setSelectedFile(filename);
-              setActivePage(page || 1);
-              setActiveBBox(null);
-              setActiveSnippet('');
-              setActiveTab('chat');
-            }} 
-          />
-        )}
-
-        {/* TAB 3: Multi-Format Report Studio */}
-        {activeTab === 'reports' && (
-          <ReportBuilder 
-            apiKey={apiKey} 
-            availableFiles={availableFiles} 
-          />
-        )}
-
-        {/* TAB 4: Document Repository (100+) */}
-        {activeTab === 'documents' && (
-          <Repository
-            availableFiles={availableFiles}
-            onRefresh={fetchDocuments}
-            onSelectForAudit={handleAuditDocument}
-          />
-        )}
+          {activeTab === 'documents' && (
+            <div className="h-full w-full mx-auto overflow-y-auto p-4 md:p-6 pb-12">
+              <Repository
+                availableFiles={availableFiles}
+                onRefresh={fetchDocuments}
+                onSelectForAudit={handleAuditDocument}
+              />
+            </div>
+          )}
+        </div>
       </main>
 
-      {/* Interactive Onboarding Tour for Evaluators / Judges */}
-      <OnboardingTour
-        isOpen={isTourOpen}
-        onClose={() => setIsTourOpen(false)}
-        onNavigateTab={(t) => setActiveTab(t)}
-      />
-
-      {/* Mandatory Groq API Key Modal */}
       {showKeyModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-white font-bold text-sm">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                  <Key className="w-4 h-4" />
-                </div>
-                <span>Configure Groq API Key</span>
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div 
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="api-key-modal-title"
+            className="bg-surface-1 border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 text-text-primary relative m-auto"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 id="api-key-modal-title" className="text-sm font-bold text-text-primary">
+                  Groq Inference API Key
+                </h2>
+                <p className="text-[11px] text-text-tertiary mt-0.5">
+                  Optional: Keys are stored only in your local browser session.
+                </p>
               </div>
               <button
                 onClick={() => setShowKeyModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
-                title="Dismiss modal"
+                className="text-text-secondary hover:text-text-primary p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+                aria-label="Close modal"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              This platform uses high-throughput LLaMA models via the <strong className="text-amber-400">Groq SDK</strong> with hardware acceleration. A valid key is required to ensure authentic, unhallucinated responses.
-            </p>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
-                Groq API Key:
-              </label>
-              <input
-                type="password"
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                placeholder="gsk_..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-              />
-            </div>
-
-            {keyValidationStatus && (
-              <div className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
-                keyValidationStatus.valid
-                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-                  : 'bg-red-950/40 border-red-500/40 text-red-300'
-              }`}>
-                {keyValidationStatus.valid ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                ) : (
-                  <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
-                )}
-                <span>{keyValidationStatus.message}</span>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="apiKeyInput" className="text-xs font-semibold text-text-secondary block">
+                  API Key (gsk_...)
+                </label>
+                <input
+                  id="apiKeyInput"
+                  type="password"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  placeholder="gsk_..."
+                  className="w-full bg-surface-0 border border-border rounded-xl px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent transition-colors font-mono"
+                />
               </div>
-            )}
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-              {apiKey ? (
-                <button
-                  onClick={handleClearKey}
-                  className="text-xs text-slate-400 hover:text-red-400 transition-colors"
-                >
-                  Clear Stored Key
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowKeyModal(false)}
-                  className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
-                >
-                  Explore Portal (Read-Only)
-                </button>
+              {keyValidationStatus && (
+                <div className={`p-3 rounded-xl border text-xs ${
+                  keyValidationStatus.valid
+                    ? 'bg-status-success/10 border-status-success/20 text-status-success'
+                    : 'bg-status-error/10 border-status-error/20 text-status-error'
+                }`}>
+                  {keyValidationStatus.message}
+                </div>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between pt-3 border-t border-border gap-2">
+                {apiKey ? (
+                  <button
+                    onClick={handleClearKey}
+                    className="text-xs text-text-secondary hover:text-status-error transition-colors px-2 py-1.5 cursor-pointer font-medium"
+                  >
+                    Clear Key
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowKeyModal(false)}
+                    className="text-xs text-text-secondary hover:text-text-primary transition-colors px-2 py-1.5 cursor-pointer font-medium"
+                  >
+                    Close
+                  </button>
+                )}
+
                 <button
                   onClick={handleValidateAndSaveKey}
                   disabled={validatingKey || !keyInput.trim()}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow transition-all disabled:opacity-40"
+                  className="bg-accent hover:bg-accent-hover text-white font-semibold px-4 py-2 rounded-xl text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-accent/25 cursor-pointer"
                 >
-                  {validatingKey ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Validating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>Save & Activate</span>
-                    </>
-                  )}
+                  {validatingKey ? "Validating..." : "Save Key"}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+      {/* Modern Interactive Onboarding Tour */}
+      <OnboardingTour 
+        isOpen={isTourOpen} 
+        onClose={() => setIsTourOpen(false)} 
+        onNavigateTab={setActiveTab}
+        onSelectCitation={handleSelectCitation}
+        onAskAssistant={(query) => {
+          setChatInitialQuery(query);
+          setActiveTab('chat');
+        }}
+        availableFiles={availableFiles}
+      />
     </div>
   );
 }

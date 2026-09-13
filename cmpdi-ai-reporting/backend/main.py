@@ -4,6 +4,7 @@ import re
 import json
 import logging
 import threading
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -13,12 +14,14 @@ from fastapi import FastAPI, HTTPException, Query, Body, Response, UploadFile, F
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import numpy as np
 
 import fitz  # PyMuPDF
-from ingester import engine, STORAGE_DIR, PDF_DIR, CHROMA_DIR
+from ingester import engine, STORAGE_DIR, PDF_DIR, CHROMA_DIR, SUPPORTED_EXTENSIONS
 from scraper import scrape_official_coal_portal, scrape_public_data, purge_synthetic_pdfs, SCRAPE_LOGS, add_log
 from rag_engine import query_rag, pick_model, test_and_resolve_model, GROQ_API_KEY, extract_domain_entities_via_inference, ENGLISH_SEMANTIC_STOPWORDS
 from report_generator import build_multi_format_report, build_structured_report, REPORTS_DIR
+from subsidiary_data import SUBSIDIARY_STATS, HISTORICAL_DATA
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("main_api")
@@ -29,11 +32,29 @@ app = FastAPI(
     version="3.1.0"
 )
 
-# Enable CORS for Vite frontend
+# ============================================================
+# Security Constants
+# ============================================================
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB upload limit
+
+def _safe_resolve_path(filename: str, *allowed_dirs: Path) -> Path:
+    """Resolve a filename within allowed directories, preventing path traversal.
+    Raises HTTPException 400 if the resolved path escapes the allowed directory."""
+    # Strip any directory components — only allow bare filenames
+    clean_name = Path(filename).name
+    if clean_name != filename or '..' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename.")
+    for base_dir in allowed_dirs:
+        candidate = (base_dir / clean_name).resolve()
+        if candidate.is_relative_to(base_dir.resolve()) and candidate.exists():
+            return candidate
+    raise HTTPException(status_code=404, detail="Requested file not found.")
+
+# Enable CORS for Vite frontend (S3: removed allow_credentials with wildcard origin)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -87,8 +108,9 @@ def require_api_key(provided_key: Optional[str] = None) -> str:
         )
     return key
 
-@app.on_event("startup")
-async def startup_event():
+# Lifespan handler (Q1: migrated from deprecated on_event)
+@asynccontextmanager
+async def lifespan(app):
     logger.info("Initializing GeoIntel Core AI Reporting Engine...")
     purge_synthetic_pdfs()
     real_pdfs = list(PDF_DIR.glob("*.pdf"))
@@ -99,6 +121,10 @@ async def startup_event():
         logger.info("ChromaDB vector store is empty. Ingesting real documents...")
         engine.ingest_directory()
     logger.info(f"Startup complete. Vector store contains {engine.collection.count()} chunks across {len(list(PDF_DIR.glob('*.pdf')))} real documents.")
+    yield
+    logger.info("GeoIntel Core shutting down.")
+
+app.router.lifespan_context = lifespan
 
 @app.get("/api/config")
 def get_system_config():
@@ -188,52 +214,74 @@ def handle_generate_structured_report(req: StructuredReportRequest):
 
 @app.get("/api/download-report/{filename}")
 def download_report(filename: str):
-    file_path = REPORTS_DIR / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Requested report file not found.")
+    file_path = _safe_resolve_path(filename, REPORTS_DIR)
     
     media_type = "application/octet-stream"
-    if filename.endswith(".docx"):
+    clean_name = file_path.name
+    if clean_name.endswith(".docx"):
         media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    elif filename.endswith(".pdf"):
+    elif clean_name.endswith(".pdf"):
         media_type = "application/pdf"
-    elif filename.endswith(".md"):
+    elif clean_name.endswith(".md"):
         media_type = "text/markdown"
 
     return FileResponse(
         path=str(file_path),
         media_type=media_type,
-        filename=filename
+        filename=clean_name
     )
 
 @app.get("/api/documents")
 def list_documents():
+    """List all indexed documents (PDF, XLSX, CSV, Images).
+    SIH26023 Compliance: supports all required document types."""
     chunk_counts = engine.get_document_chunk_counts()
     docs = []
-    for p in sorted(PDF_DIR.glob("*.pdf"), key=lambda f: f.stat().st_mtime, reverse=True):
-        try:
-            doc = fitz.open(str(p))
-            page_count = len(doc)
-            doc.close()
-        except Exception:
-            page_count = 1
+    
+    # Collect all supported file types
+    all_files = []
+    for ext in SUPPORTED_EXTENSIONS:
+        all_files.extend(PDF_DIR.glob(f"*{ext}"))
+        all_files.extend(PDF_DIR.glob(f"*{ext.upper()}"))
+    all_files = sorted(set(all_files), key=lambda f: f.stat().st_mtime, reverse=True)
+    
+    for p in all_files:
+        page_count = 1
+        file_ext = p.suffix.lower()
+        format_label = file_ext.replace('.', '').upper()
+        
+        if file_ext == ".pdf":
+            try:
+                doc = fitz.open(str(p))
+                page_count = len(doc)
+                doc.close()
+            except Exception:
+                page_count = 1
         
         mtime = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
         docs.append({
             "filename": p.name,
+            "format": format_label,
             "size_kb": round(p.stat().st_size / 1024, 1),
             "pages": page_count,
             "chunks": chunk_counts.get(p.name, 0),
             "upload_date": mtime,
             "status": "Indexed in ChromaDB" if chunk_counts.get(p.name, 0) > 0 else "Ready",
-            "url": f"/api/pdf-raw/{p.name}"
+            "url": f"/api/pdf-raw/{p.name}" if file_ext == ".pdf" else None
         })
     return {"documents": docs, "total_count": len(docs)}
 
 @app.post("/api/upload-pdf")
-async def upload_pdf(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+@app.post("/api/upload-document")
+async def upload_document(file: UploadFile = File(...)):
+    """Upload and index documents. Supports: PDF, XLSX, CSV, PNG, JPG, TIFF.
+    SIH26023 Compliance: 'scanned PDFs, digital documents, spreadsheets, images'"""
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{file_ext}'. Supported formats: {', '.join(sorted(SUPPORTED_EXTENSIONS))}"
+        )
     
     clean_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', file.filename)
     raw_stem = Path(clean_filename).stem
@@ -249,16 +297,25 @@ async def upload_pdf(file: UploadFile = File(...)):
     target_path = PDF_DIR / clean_filename
     
     content = await file.read()
+    # S2: Enforce upload size limit
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum upload size is {MAX_UPLOAD_BYTES // (1024*1024)} MB."
+        )
     target_path.write_bytes(content)
     
-    chunks_added = engine.ingest_single_pdf(target_path)
+    # Use unified ingestion entry point for all file types
+    chunks_added = engine.ingest_single_file(target_path)
     
-    try:
-        doc = fitz.open(str(target_path))
-        page_count = len(doc)
-        doc.close()
-    except Exception:
-        page_count = 1
+    page_count = 1
+    if file_ext == ".pdf":
+        try:
+            doc = fitz.open(str(target_path))
+            page_count = len(doc)
+            doc.close()
+        except Exception:
+            page_count = 1
 
     # Invalidate analytics cache so new uploads are processed
     if ANALYTICS_CACHE_FILE.exists():
@@ -267,15 +324,23 @@ async def upload_pdf(file: UploadFile = File(...)):
         except Exception:
             pass
 
-    add_log(f"Manual upload completed: {clean_filename} ({round(len(content)/1024, 1)} KB, {page_count} pages, {chunks_added} chunks indexed into ChromaDB)", "SUCCESS")
+    format_label = file_ext.replace('.', '').upper()
+    add_log(f"Manual upload completed: {clean_filename} ({format_label}, {round(len(content)/1024, 1)} KB, {chunks_added} chunks indexed into ChromaDB)", "SUCCESS")
+    
+    # Count all supported files in the repository
+    all_docs = []
+    for ext in SUPPORTED_EXTENSIONS:
+        all_docs.extend(PDF_DIR.glob(f"*{ext}"))
+        all_docs.extend(PDF_DIR.glob(f"*{ext.upper()}"))
     
     return {
         "status": "success",
         "filename": clean_filename,
+        "format": format_label,
         "size_kb": round(len(content) / 1024, 1),
         "pages": page_count,
         "chunks_indexed": chunks_added,
-        "total_documents": len(list(PDF_DIR.glob("*.pdf"))),
+        "total_documents": len(set(all_docs)),
         "total_vectors": engine.collection.count()
     }
 
@@ -321,35 +386,23 @@ def scrape_real_docs():
 
 @app.get("/api/pdf-raw/{filename}")
 def serve_raw_pdf(filename: str):
-    p = PDF_DIR / filename
-    if not p.exists():
-        p = REPORTS_DIR / filename
-        if not p.exists():
-            raise HTTPException(status_code=404, detail="PDF file not found.")
+    p = _safe_resolve_path(filename, PDF_DIR, REPORTS_DIR)
     headers = {
-        "Content-Disposition": f'inline; filename="{filename}"'
+        "Content-Disposition": f'inline; filename="{p.name}"'
     }
     return FileResponse(path=str(p), media_type="application/pdf", headers=headers)
 
 @app.get("/api/view-report-pdf/{filename}")
 def view_report_pdf(filename: str):
-    file_path = REPORTS_DIR / filename
-    if not file_path.exists():
-        file_path = PDF_DIR / filename
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail="Requested report file not found.")
+    file_path = _safe_resolve_path(filename, REPORTS_DIR, PDF_DIR)
     headers = {
-        "Content-Disposition": f'inline; filename="{filename}"'
+        "Content-Disposition": f'inline; filename="{file_path.name}"'
     }
     return FileResponse(path=str(file_path), media_type="application/pdf", headers=headers)
 
 @app.get("/api/pdf-info")
 def get_pdf_info(file: str = Query(...)):
-    p = PDF_DIR / file
-    if not p.exists():
-        p = REPORTS_DIR / file
-        if not p.exists():
-            raise HTTPException(status_code=404, detail=f"PDF document '{file}' not found.")
+    p = _safe_resolve_path(file, PDF_DIR, REPORTS_DIR)
     try:
         doc = fitz.open(str(p))
         total_pages = len(doc)
@@ -360,22 +413,20 @@ def get_pdf_info(file: str = Query(...)):
             h = float(first_page.rect.height)
         doc.close()
         return {
-            "filename": file,
+            "filename": p.name,
             "total_pages": total_pages,
             "width": w,
             "height": h
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error reading PDF info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/pdf-page")
 def render_pdf_page(file: str = Query(...), page: int = Query(1)):
-    p = PDF_DIR / file
-    if not p.exists():
-        p = REPORTS_DIR / file
-        if not p.exists():
-            raise HTTPException(status_code=404, detail="PDF not found.")
+    p = _safe_resolve_path(file, PDF_DIR, REPORTS_DIR)
     
     try:
         doc = fitz.open(str(p))
@@ -444,15 +495,7 @@ def get_analytics(refresh: bool = False, api_key: Optional[str] = None):
         except Exception as e:
             logger.warning(f"Failed to write analytics cache: {e}")
 
-    subsidiary_stats = [
-        {"name": "MCL", "fullName": "Mahanadi Coalfields", "opencast": 181.50, "underground": 11.80, "total": 193.30, "target": 190.00, "growth": 11.9, "region": "Odisha"},
-        {"name": "SECL", "fullName": "South Eastern Coalfields", "opencast": 155.80, "underground": 11.20, "total": 167.00, "target": 170.00, "growth": 13.2, "region": "Chhattisgarh/MP"},
-        {"name": "NCL", "fullName": "Northern Coalfields", "opencast": 131.00, "underground": 0.00, "total": 131.00, "target": 131.00, "growth": 6.8, "region": "Singrauli, MP/UP"},
-        {"name": "CCL", "fullName": "Central Coalfields", "opencast": 82.90, "underground": 1.10, "total": 84.00, "target": 84.00, "growth": 14.2, "region": "Jharkhand"},
-        {"name": "WCL", "fullName": "Western Coalfields", "opencast": 57.10, "underground": 3.20, "total": 60.30, "target": 62.00, "growth": 4.5, "region": "Maharashtra/MP"},
-        {"name": "BCCL", "fullName": "Bharat Coking Coal", "opencast": 39.80, "underground": 1.30, "total": 41.10, "target": 41.00, "growth": 17.4, "region": "Dhanbad, Jharkhand"},
-        {"name": "ECL", "fullName": "Eastern Coalfields", "opencast": 25.90, "underground": 9.20, "total": 35.10, "target": 37.00, "growth": 4.8, "region": "Raniganj, WB/Jharkhand"}
-    ]
+    subsidiary_stats = SUBSIDIARY_STATS
 
     # Topic clusters with verified high-frequency terms (all >0 occurrences in ChromaDB)
     topic_clusters = [
@@ -460,25 +503,25 @@ def get_analytics(refresh: bool = False, api_key: Optional[str] = None):
             "topic": "Gondwana Stratigraphy & Exploration",
             "terms": ["Barakar", "Raniganj", "Borehole", "Lower Gondwana", "Coal Seam"],
             "share": 34,
-            "color": "#059669"
+            "color": "#1D7A72"  # Digital Teal
         },
         {
             "topic": "Opencast Extraction & Overburden",
             "terms": ["Stripping Ratio", "Overburden", "Opencast", "Gevra", "Kusmunda"],
             "share": 41,
-            "color": "#2563EB"
+            "color": "#0B3556"  # Institutional Navy
         },
         {
             "topic": "Coal Beneficiation & Technology",
             "terms": ["Washery", "First Mile Connectivity", "CBM", "Exploration", "HEMM"],
             "share": 15,
-            "color": "#D97706"
+            "color": "#C98A2B"  # Energy Amber
         },
         {
             "topic": "Key Coal Operating Subsidiaries",
             "terms": ["CMPDI", "MCL", "SECL", "NCL", "CCL", "WCL", "BCCL", "ECL"],
             "share": 10,
-            "color": "#7C3AED"
+            "color": "#4A7FAE"  # Steel Info Blue
         }
     ]
 
@@ -613,11 +656,15 @@ def get_entity_occurrences(term: str = Query(..., min_length=1)):
 @app.post("/api/report-feedback")
 def log_report_feedback(report_name: str, feedback: str = Body(...)):
     """Log user feedback for a generated report."""
+    # S4: Sanitize report_name — allow only alphanumeric, underscores, hyphens, dots
+    clean_report_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', report_name)[:200]
+    if not clean_report_name or not clean_report_name.strip("._-"):
+        raise HTTPException(status_code=400, detail="Invalid report name.")
     feedback_file = REPORTS_DIR / "feedback.jsonl"
     entry = {
         "timestamp": datetime.now().isoformat(),
-        "report_name": report_name,
-        "feedback": feedback
+        "report_name": clean_report_name,
+        "feedback": feedback[:5000]  # Cap feedback length
     }
     with open(feedback_file, "a") as f:
         f.write(json.dumps(entry) + "\n")
@@ -664,6 +711,144 @@ def get_reports_history():
 
     return {"reports": reports, "total": len(reports)}
 
+# ============================================================
+# Predictive Analytics & AI Recommendations
+# SIH26023 Compliance: "AI-generated recommendations" + "operational excellence"
+# ============================================================
+
+class PredictiveAnalyticsRequest(BaseModel):
+    subsidiary: str = "MCL"
+    metric: str = "production"  # production, obr, growth
+    forecast_years: int = 3
+    api_key: Optional[str] = None
+
+@app.post("/api/predictive-analytics")
+def get_predictive_analytics(req: PredictiveAnalyticsRequest):
+    """
+    Generates trend projections and AI-powered strategic recommendations.
+    Uses historical subsidiary data + linear regression for forecasting.
+    SIH26023 Compliance: 'AI-generated recommendations' and 'operational excellence'.
+    """
+    # Historical production data (FY 2019-20 to FY 2023-24)
+
+    fiscal_years = ["FY 2019-20", "FY 2020-21", "FY 2021-22", "FY 2022-23", "FY 2023-24"]
+    sub = req.subsidiary.upper()
+    metric = req.metric.lower()
+
+    if sub not in HISTORICAL_DATA:
+        raise HTTPException(status_code=400, detail=f"Unknown subsidiary '{sub}'. Available: {list(HISTORICAL_DATA.keys())}")
+
+    if metric not in HISTORICAL_DATA[sub]:
+        raise HTTPException(status_code=400, detail=f"Unknown metric '{metric}'. Available: production, obr")
+
+    values = HISTORICAL_DATA[sub][metric]
+    x = np.arange(len(values), dtype=np.float64)
+    y = np.array(values, dtype=np.float64)
+
+    # Linear regression for trend projection
+    coeffs = np.polyfit(x, y, 1)
+    slope, intercept = coeffs[0], coeffs[1]
+
+    # Project future values
+    projections = []
+    forecast_years_list = []
+    for i in range(1, req.forecast_years + 1):
+        future_x = len(values) - 1 + i
+        projected = slope * future_x + intercept
+        fy_label = f"FY {2023 + i}-{str(24 + i).zfill(2)}"
+        projections.append(round(projected, 2))
+        forecast_years_list.append(fy_label)
+
+    # Compute CAGR
+    cagr = ((values[-1] / values[0]) ** (1 / (len(values) - 1)) - 1) * 100 if values[0] > 0 else 0.0
+
+    # Q4: Proper prediction intervals using residual standard error
+    n = len(values)
+    y_hat = slope * x + intercept
+    residuals = y - y_hat
+    se_residual = float(np.sqrt(np.sum(residuals**2) / max(n - 2, 1)))
+    x_mean = np.mean(x)
+    ss_x = np.sum((x - x_mean)**2)
+    # t-critical for 95% CI with n-2 degrees of freedom (approximation for small n)
+    t_crit = 2.776 if n <= 5 else (2.228 if n <= 10 else 1.96)
+
+    confidence_upper = []
+    confidence_lower = []
+    for i in range(1, req.forecast_years + 1):
+        future_x = len(values) - 1 + i
+        # Prediction interval width: accounts for regression uncertainty + forecast distance
+        pred_se = se_residual * float(np.sqrt(1 + 1/n + (future_x - x_mean)**2 / max(ss_x, 1e-6)))
+        margin = t_crit * pred_se
+        projected = projections[i - 1]
+        confidence_upper.append(round(projected + margin, 2))
+        confidence_lower.append(round(max(0, projected - margin), 2))
+
+    result = {
+        "subsidiary": sub,
+        "metric": metric,
+        "unit": "MT" if metric == "production" else "M.Cum",
+        "historical": {"years": fiscal_years, "values": values},
+        "projections": {"years": forecast_years_list, "values": projections},
+        "confidence_upper": confidence_upper,
+        "confidence_lower": confidence_lower,
+        "trend": {
+            "slope_per_year": round(slope, 2),
+            "cagr_pct": round(cagr, 2),
+            "direction": "upward" if slope > 0 else "downward"
+        }
+    }
+
+    # Generate AI strategic recommendations if API key provided
+    active_key = (req.api_key or "").strip()
+    if active_key:
+        try:
+            from rag_engine import get_groq_client, get_best_model_for_client, execute_groq_resilient_chat
+            client, key = get_groq_client(active_key)
+            model = get_best_model_for_client(client, key)
+
+            rec_prompt = (
+                f"You are a Senior Strategic Advisor for CMPDI/Coal India Limited. "
+                f"Based on the following trend data for {sub}, provide 5 actionable strategic recommendations:\n\n"
+                f"Subsidiary: {sub}\n"
+                f"Metric: {metric} ({'Million Tonnes' if metric == 'production' else 'M.Cum'})\n"
+                f"Historical ({fiscal_years[0]} to {fiscal_years[-1]}): {values}\n"
+                f"CAGR: {round(cagr, 2)}%\n"
+                f"Projected {forecast_years_list}: {projections}\n\n"
+                f"Provide specific, data-driven recommendations for optimizing {sub}'s {metric} trajectory. "
+                f"Include operational, technological, and strategic suggestions. "
+                f"Format as numbered list. Be concise."
+            )
+
+            rec_text, _ = execute_groq_resilient_chat(
+                client=client,
+                messages=[{"role": "user", "content": rec_prompt}],
+                preferred_model=model,
+                max_tokens=600,
+                temperature=0.3
+            )
+            result["ai_recommendations"] = rec_text
+        except Exception as e:
+            logger.warning(f"AI recommendations failed: {e}")
+            result["ai_recommendations"] = f"AI recommendations unavailable: {str(e)[:100]}"
+    else:
+        result["ai_recommendations"] = "Provide a Groq API key to generate AI-powered strategic recommendations."
+
+    return result
+
+
+# ============================================================
+# Serve Built Frontend in Production / Docker
+# ============================================================
+FRONTEND_DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if not FRONTEND_DIST_DIR.exists():
+    FRONTEND_DIST_DIR = Path("/app/frontend/dist")
+
+if FRONTEND_DIST_DIR.exists():
+    from fastapi.staticfiles import StaticFiles
+    logger.info(f"Mounting production frontend build from: {FRONTEND_DIST_DIR}")
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST_DIR), html=True), name="frontend")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+

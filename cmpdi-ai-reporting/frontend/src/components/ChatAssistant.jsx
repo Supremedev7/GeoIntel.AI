@@ -1,10 +1,20 @@
 import React, { useState, useRef, useEffect } from "react";
 import { 
-  Send, Bot, User, Sparkles, FileText, ChevronRight, 
-  MapPin, Clock, Zap, AlertCircle, HelpCircle, Filter, Key, ArrowUp,
+  Bot, User, FileText, MapPin, Clock, Zap, Filter, Key, ArrowUp,
   FileCheck, Download, History, X, Shield, FileCode, CheckCircle2,
-  Building2, Layers, Compass, Database, FileSpreadsheet
+  Building2, Layers, Compass, Database, FileSpreadsheet, Plus,
+  Mic, MicOff, Trash2, MessageSquare
 } from "lucide-react";
+
+const SESSIONS_STORAGE_KEY = "cmpdi_chat_sessions_v2";
+
+const defaultAssistantMessage = {
+  id: "initial-welcome-message",
+  role: "assistant",
+  content: "Hello! I am **GeoIntel Core**, developed for CMPDI & Coal India Limited.\n\nI have direct access to **official coal reports, drilling archives, and Detailed Project Reports (DPRs)** indexed in our spatial vector repository.\n\nYou can ask questions about national coal production, CMPDI drilling meterage, seam stratigraphy, or stripping ratios with interactive document citations.",
+  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  citations: []
+};
 
 export default function ChatAssistant({ 
   onSelectCitation, 
@@ -13,61 +23,109 @@ export default function ChatAssistant({
   onOpenKeyModal,
   availableFiles = [],
   selectedFile,
-  onFileChange
+  onFileChange,
+  initialQuery = "",
+  onClearInitialQuery
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery || "");
   const [loading, setLoading] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
+
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      setQuery(initialQuery);
+      if (onClearInitialQuery) onClearInitialQuery();
+    }
+  }, [initialQuery]);
   const [showHistory, setShowHistory] = useState(false);
+  const [historyTab, setHistoryTab] = useState("chats"); // 'chats' or 'reports'
   const [reportsHistory, setReportsHistory] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [showActionsPopover, setShowActionsPopover] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+
+  // Multi-session chat history state
+  const [currentSessionId, setCurrentSessionId] = useState(() => Date.now().toString());
+  const [chatSessions, setChatSessions] = useState(() => {
+    try {
+      const raw = localStorage.getItem(SESSIONS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [messages, setMessages] = useState([defaultAssistantMessage]);
   const messagesEndRef = useRef(null);
+  const actionsPopoverRef = useRef(null);
+  const recognitionRef = useRef(null);
 
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content: "Hello! I am **GeoIntel Core**, developed by **Team Data Miners** for CMPDI & Coal India Limited.\n\nI have direct access to **100+ official coal reports, drilling archives, and Detailed Project Reports (DPRs)** indexed in our spatial vector repository.\n\nYou can ask questions about coal production, CMPDI drilling meterage, seam stratigraphy, or stripping ratios with verified spatial citations.",
-      citations: [
-        {
-          source: "Coal_Ministry_Mine_Plan_Guidelines.pdf",
-          file_id: "Coal_Ministry_Mine_Plan_Guidelines.pdf",
-          page_number: 1,
-          bbox: [54.0, 72.0, 558.0, 110.0],
-          exact_snippet: "Guidelines for preparation of Mine Plans for Coal and Lignite Blocks across Coal India subsidiaries",
-          score: 0.99
-        }
-      ],
-      model: "Groq LLaMA Inference",
-      latency_ms: 180
-    }
-  ]);
+  // Initialize Web Speech API
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = "en-IN";
 
-  const reportTemplates = [
-    {
-      id: "comprehensive_audit",
-      label: "Executive Performance",
-      icon: Building2,
-      prompt: "Summarize national coal production, subsidiary growth rates, and FMC logistics for FY 2023-24"
-    },
-    {
-      id: "production_obr",
-      label: "OBR & Stripping",
-      icon: Layers,
-      prompt: "Analyze Overburden Removal (OBR) dynamics, stripping ratios, and HEMM utilization across opencast mines"
-    },
-    {
-      id: "geological_exploration",
-      label: "Stratigraphy & Drilling",
-      icon: Compass,
-      prompt: "Detail CMPDI exploratory drilling meterage, Barakar formation stratigraphy, and 2D/3D seismic survey results"
-    },
-    {
-      id: "cbm_clean_coal",
-      label: "CBM & Clean Coal",
-      icon: Database,
-      prompt: "Provide assessment of Coal Bed Methane reserves in Jharia and Bokaro deep seams and washery beneficiation"
+        recognition.onresult = (event) => {
+          const transcript = event.results?.[0]?.[0]?.transcript;
+          if (transcript) {
+            setQuery((prev) => (prev ? `${prev} ${transcript}` : transcript));
+          }
+          setIsListening(false);
+        };
+
+        recognition.onerror = (event) => {
+          console.warn("Speech recognition notice:", event.error);
+          setIsListening(false);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+      } catch (e) {
+        console.warn("Speech recognition init failed:", e);
+      }
     }
-  ];
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert("Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (e) {
+        console.warn(e);
+        setIsListening(false);
+      }
+    }
+  };
+
+  // Close actions popover on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (actionsPopoverRef.current && !actionsPopoverRef.current.contains(e.target)) {
+        setShowActionsPopover(false);
+      }
+    };
+    if (showActionsPopover) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showActionsPopover]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,8 +135,44 @@ export default function ChatAssistant({
     scrollToBottom();
   }, [messages, loading, generatingReport]);
 
+  // Persist active conversation to chat sessions in localStorage
+  useEffect(() => {
+    const userMsg = messages.find((m) => m.role === "user");
+    if (!userMsg) return;
+
+    setChatSessions((prev) => {
+      const title = userMsg.content.slice(0, 42) + (userMsg.content.length > 42 ? "..." : "");
+      const existingIndex = prev.findIndex((s) => s.id === currentSessionId);
+      let updated;
+      if (existingIndex >= 0) {
+        updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          title,
+          updatedAt: new Date().toISOString(),
+          messages
+        };
+      } else {
+        updated = [
+          {
+            id: currentSessionId,
+            title,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            messages
+          },
+          ...prev
+        ];
+      }
+      try {
+        localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated.slice(0, 30)));
+      } catch {}
+      return updated;
+    });
+  }, [messages, currentSessionId]);
+
   const fetchReportsHistory = async () => {
-    setLoadingHistory(true);
+    setLoadingReports(true);
     try {
       const resp = await fetch("/api/reports-history");
       if (resp.ok) {
@@ -88,13 +182,50 @@ export default function ChatAssistant({
     } catch (e) {
       console.error("Failed to load reports history:", e);
     } finally {
-      setLoadingHistory(false);
+      setLoadingReports(false);
     }
   };
 
   useEffect(() => {
     fetchReportsHistory();
   }, []);
+
+  const handleNewChat = () => {
+    setCurrentSessionId(Date.now().toString());
+    setMessages([defaultAssistantMessage]);
+    setQuery("");
+    setShowActionsPopover(false);
+  };
+
+  const handleLoadSession = (session) => {
+    setCurrentSessionId(session.id);
+    setMessages(session.messages || [defaultAssistantMessage]);
+    setShowHistory(false);
+  };
+
+  const handleDeleteSession = (e, sessionId) => {
+    e.stopPropagation();
+    setChatSessions((prev) => {
+      const next = prev.filter((s) => s.id !== sessionId);
+      try {
+        localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    if (currentSessionId === sessionId) {
+      handleNewChat();
+    }
+  };
+
+  const handleClearAllSessions = () => {
+    if (window.confirm("Are you sure you want to clear all chat history sessions?")) {
+      setChatSessions([]);
+      try {
+        localStorage.removeItem(SESSIONS_STORAGE_KEY);
+      } catch {}
+      handleNewChat();
+    }
+  };
 
   const handleSend = async (textToSend) => {
     const q = textToSend || query;
@@ -136,7 +267,7 @@ export default function ChatAssistant({
         role: "assistant",
         content: data.answer,
         citations: data.citations || [],
-        model: data.model || "Groq Dynamic LLaMA",
+        model: data.model || "Groq LLaMA 3.3 70B",
         latency_ms: data.latency_ms
       };
 
@@ -167,13 +298,14 @@ export default function ChatAssistant({
       return;
     }
 
+    setShowActionsPopover(false);
     const userMessage = { role: "user", content: `📑 Generate Official Technical Report: "${q}"` };
     setMessages((prev) => [...prev, userMessage]);
     setQuery("");
     setGeneratingReport(true);
 
     try {
-      const rawSelected = typeof selectedFile === 'object' && selectedFile !== null ? (selectedFile.filename || '') : (selectedFile || '');
+      const rawSelected = typeof selectedFile === "object" && selectedFile !== null ? (selectedFile.filename || "") : (selectedFile || "");
       const targetSub = rawSelected && rawSelected !== "all" 
         ? String(rawSelected).replace(".pdf", "").replace(/_/g, " ")
         : "All CIL Aggregate";
@@ -203,7 +335,7 @@ export default function ChatAssistant({
         base_name: data.base_name,
         content: data.preview_text,
         files: data.files,
-        model: data.model || "Groq Dynamic LLaMA"
+        model: data.model || "Groq LLaMA 3.3 70B"
       };
 
       setMessages((prev) => [...prev, reportMessage]);
@@ -223,7 +355,7 @@ export default function ChatAssistant({
     }
   };
 
-  // Enhanced Markdown parser with real table rendering
+  // Enhanced Markdown parser with real table rendering and internal scroll bounds
   const renderContent = (content) => {
     if (!content) return null;
     const strContent = typeof content === "string" ? content : String(content);
@@ -237,22 +369,22 @@ export default function ChatAssistant({
       const headerRow = tableRows[0];
       const bodyRows = tableRows.slice(1);
       const tableEl = (
-        <div key={`tbl-${key}`} className="my-3 overflow-x-auto rounded-xl border border-slate-700 bg-slate-950/80">
-          <table className="w-full text-[11px] text-left">
-            <thead className="bg-slate-800 text-slate-200 border-b border-slate-700">
+        <div key={`tbl-${key}`} className="my-3 overflow-x-auto rounded-xl border border-border bg-surface-0/90 shadow-sm max-w-full">
+          <table className="w-full text-[11px] text-left border-collapse">
+            <thead className="bg-surface-2 text-text-primary border-b border-border">
               <tr>
                 {headerRow.map((col, cIdx) => (
-                  <th key={cIdx} className="px-3 py-2 font-bold whitespace-nowrap">
+                  <th key={cIdx} className="px-3 py-2 font-bold whitespace-nowrap text-text-primary">
                     {col.replace(/\*\*/g, "")}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
+            <tbody className="divide-y divide-border">
               {bodyRows.map((row, rIdx) => (
-                <tr key={rIdx} className={rIdx % 2 === 0 ? "bg-slate-900/40" : "bg-transparent"}>
+                <tr key={rIdx} className={rIdx % 2 === 0 ? "bg-surface-1/40" : "bg-transparent"}>
                   {row.map((cell, cIdx) => (
-                    <td key={cIdx} className="px-3 py-1.5 text-slate-300 font-medium">
+                    <td key={cIdx} className="px-3 py-1.5 text-text-secondary font-medium">
                       {cell.replace(/\*\*/g, "")}
                     </td>
                   ))}
@@ -275,7 +407,7 @@ export default function ChatAssistant({
         if (lineTrim.includes("---")) {
           continue; // Separator line
         }
-        const cells = lineTrim.split("|").slice(1, -1).map(c => c.trim());
+        const cells = lineTrim.split("|").slice(1, -1).map((c) => c.trim());
         tableRows.push(cells);
         inTable = true;
         continue;
@@ -286,33 +418,33 @@ export default function ChatAssistant({
       }
 
       if (line.startsWith("### ")) {
-        elements.push(<h3 key={idx} className="text-xs font-bold text-blue-300 mt-2.5 mb-1">{line.replace("### ", "")}</h3>);
+        elements.push(<h3 key={idx} className="text-xs font-bold text-accent mt-2.5 mb-1">{line.replace("### ", "")}</h3>);
       } else if (line.startsWith("## ")) {
-        elements.push(<h2 key={idx} className="text-sm font-bold text-white mt-3 mb-1 border-b border-slate-800 pb-1">{line.replace("## ", "")}</h2>);
+        elements.push(<h2 key={idx} className="text-sm font-bold text-text-primary mt-3 mb-1 border-b border-border pb-1">{line.replace("## ", "")}</h2>);
       } else if (line.startsWith("# ")) {
-        elements.push(<h1 key={idx} className="text-base font-extrabold text-white mt-3 mb-2">{line.replace("# ", "")}</h1>);
+        elements.push(<h1 key={idx} className="text-base font-extrabold text-text-primary mt-3 mb-2">{line.replace("# ", "")}</h1>);
       } else if (line.startsWith("- ") || line.startsWith("* ")) {
         elements.push(
-          <li key={idx} className="ml-4 list-disc text-slate-200 text-xs my-0.5 leading-relaxed">
+          <li key={idx} className="ml-4 list-disc text-text-primary text-xs my-0.5 leading-relaxed">
             {renderInlineMarkdown(line.substring(2))}
           </li>
         );
       } else if (/^\d+\.\s/.test(lineTrim)) {
         elements.push(
-          <li key={idx} className="ml-4 list-decimal text-slate-200 text-xs my-0.5 leading-relaxed">
+          <li key={idx} className="ml-4 list-decimal text-text-primary text-xs my-0.5 leading-relaxed">
             {renderInlineMarkdown(lineTrim.replace(/^\d+\.\s/, ""))}
           </li>
         );
       } else if (lineTrim.startsWith("> ")) {
         elements.push(
-          <blockquote key={idx} className="border-l-2 border-blue-500/60 pl-3 py-1 my-1 italic text-slate-300 text-xs bg-slate-950/40 rounded-r">
+          <blockquote key={idx} className="border-l-2 border-accent pl-3 py-1 my-1 italic text-text-secondary text-xs bg-surface-1/40 rounded-r">
             {renderInlineMarkdown(lineTrim.replace("> ", ""))}
           </blockquote>
         );
       } else if (!lineTrim) {
         elements.push(<div key={idx} className="h-1" />);
       } else {
-        elements.push(<p key={idx} className="text-xs text-slate-200 my-1 leading-relaxed">{renderInlineMarkdown(line)}</p>);
+        elements.push(<p key={idx} className="text-xs text-text-primary my-1 leading-relaxed break-words">{renderInlineMarkdown(line)}</p>);
       }
     }
 
@@ -330,97 +462,165 @@ export default function ChatAssistant({
     const parts = strText.split(/(\*\*.*?\*\*|`.*?`)/g);
     return parts.map((part, i) => {
       if (part.startsWith("**") && part.endsWith("**")) {
-        return <strong key={i} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+        return <strong key={i} className="font-semibold text-text-primary">{part.slice(2, -2)}</strong>;
       }
       if (part.startsWith("`") && part.endsWith("`")) {
-        return <code key={i} className="font-mono text-[11px] bg-slate-800 text-amber-300 px-1 py-0.5 rounded">{part.slice(1, -1)}</code>;
+        return <code key={i} className="font-mono text-[11px] bg-surface-2 text-amber-600 dark:text-amber-400 px-1 py-0.5 rounded border border-border">{part.slice(1, -1)}</code>;
       }
       return part;
     });
   };
 
+  const quickActionOptions = [
+    {
+      id: "report_now",
+      title: "Generate Formal Technical Report",
+      desc: "Synthesize executive report in DOCX, PDF & Markdown with document citations",
+      icon: FileCheck,
+      action: () => handleGenerateReportDirect(query || "Executive Operational Audit and Production Review")
+    },
+    {
+      id: "exec_perf",
+      title: "Executive Performance Audit",
+      desc: "National coal production, subsidiary growth rates & FMC logistics",
+      icon: Building2,
+      action: () => {
+        const p = "Summarize national coal production, subsidiary growth rates, and FMC logistics for FY 2023-24";
+        setQuery(p);
+        handleSend(p);
+        setShowActionsPopover(false);
+      }
+    },
+    {
+      id: "obr_strip",
+      title: "OBR & Stripping Analysis",
+      desc: "Overburden removal dynamics & HEMM fleet utilization across opencast mines",
+      icon: Layers,
+      action: () => {
+        const p = "Analyze Overburden Removal (OBR) dynamics, stripping ratios, and HEMM utilization across opencast mines";
+        setQuery(p);
+        handleSend(p);
+        setShowActionsPopover(false);
+      }
+    },
+    {
+      id: "strat_drill",
+      title: "Stratigraphy & Drilling Meterage",
+      desc: "Barakar formation stratigraphy, CMPDI exploratory drilling & seismic surveys",
+      icon: Compass,
+      action: () => {
+        const p = "Detail CMPDI exploratory drilling meterage, Barakar formation stratigraphy, and 2D/3D seismic survey results";
+        setQuery(p);
+        handleSend(p);
+        setShowActionsPopover(false);
+      }
+    },
+    {
+      id: "cbm_coal",
+      title: "CBM & Clean Coal Beneficiation",
+      desc: "Coal Bed Methane reserves in Jharia/Bokaro deep seams & washery yields",
+      icon: Database,
+      action: () => {
+        const p = "Provide assessment of Coal Bed Methane reserves in Jharia and Bokaro deep seams and washery beneficiation";
+        setQuery(p);
+        handleSend(p);
+        setShowActionsPopover(false);
+      }
+    }
+  ];
+
   return (
-    <div className="flex flex-col h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-      {/* Top Bar: Minimal ChatGPT style + Document Scope + Report History Button */}
-      <div className="px-4 py-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+    <div className="flex flex-col h-full bg-surface-1 border border-border rounded-2xl overflow-hidden shadow-2xl min-h-0">
+      {/* Top Header Row: Identity + New Chat + Unified History */}
+      <div className="px-4 py-2.5 bg-surface-1 border-b border-border flex items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-teal/10 border border-teal/25 flex items-center justify-center text-teal shrink-0">
             <Bot className="w-4 h-4" />
           </div>
-          <span className="text-xs font-bold text-white tracking-wide">
-            CMPDI Mining Assistant
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-semibold text-text-primary truncate">GeoIntel Assistant</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-status-success shrink-0" />
+          </div>
         </div>
 
-        {/* Document Scope Selector & History Button */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700/80 rounded-xl px-2.5 py-1">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={typeof selectedFile === 'object' && selectedFile !== null ? (selectedFile.filename || "all") : (selectedFile || "all")}
-              onChange={(e) => onFileChange && onFileChange(e.target.value)}
-              className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer max-w-[180px] truncate"
-            >
-              <option value="all">Search All 100+ Documents</option>
-              {availableFiles.map((f, i) => {
-                const fname = typeof f === 'string' ? f : (f?.filename || '');
-                if (!fname) return null;
-                return (
-                  <option key={fname || i} value={fname}>
-                    {fname.replace(".pdf", "").replace(/_/g, " ")}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
+        {/* Action Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleNewChat}
+            className="px-2.5 py-1 rounded-lg bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-text-primary border border-border text-xs font-medium flex items-center gap-1.5 transition-colors"
+            title="Start new conversation thread"
+          >
+            <Plus className="w-3.5 h-3.5 text-accent" />
+            <span>New Chat</span>
+          </button>
 
-          {/* Report History Trigger */}
           <button
             onClick={() => {
               setShowHistory(true);
               fetchReportsHistory();
             }}
-            className="flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-xl border border-slate-700 transition-colors shadow-sm"
-            title="View Previously Generated Official Reports"
+            className="px-2.5 py-1 rounded-lg bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-text-primary border border-border text-xs font-medium flex items-center gap-1.5 transition-colors"
+            title="View Chat Sessions & Generated Report Archives"
           >
-            <History className="w-3.5 h-3.5 text-blue-400" />
-            <span className="hidden sm:inline">Report History</span>
-            <span className="text-[10px] bg-slate-700 px-1.5 py-0.2 rounded-full font-bold text-slate-300">
-              {reportsHistory.length}
-            </span>
+            <History className="w-3.5 h-3.5 text-accent" />
+            <span>History</span>
+            <span className="text-[10.5px] text-text-tertiary">({chatSessions.length + reportsHistory.length})</span>
           </button>
         </div>
       </div>
 
-      {/* Message Stream */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans bg-slate-950/40">
+      {/* Sub-Header Row: Dedicated Full-Width Document Scope Bar */}
+      <div className="px-4 py-1.5 bg-surface-2/40 border-b border-border flex items-center gap-2 text-xs shrink-0">
+        <Filter className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
+        <span className="text-[11px] text-text-tertiary shrink-0">Corpus Scope:</span>
+        <select
+          value={typeof selectedFile === "object" && selectedFile !== null ? (selectedFile.filename || "all") : (selectedFile || "all")}
+          onChange={(e) => onFileChange && onFileChange(e.target.value)}
+          className="bg-transparent text-text-primary text-xs font-medium focus:outline-none cursor-pointer truncate flex-1 min-w-0"
+          title="Filter retrieval source document"
+        >
+          <option value="all">All Indexed Documents (100+)</option>
+          {availableFiles.map((f, i) => {
+            const fname = typeof f === "string" ? f : (f?.filename || "");
+            if (!fname) return null;
+            return (
+              <option key={fname || i} value={fname}>
+                {fname.replace(".pdf", "").replace(/_/g, " ")}
+              </option>
+            );
+          })}
+        </select>
+      </div>
+
+      {/* Message Stream: Strict Internal Scrollability */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans bg-transparent min-h-0">
         {messages.map((m, idx) => (
           <div
             key={idx}
-            className={`flex gap-3 max-w-3xl ${m.role === "user" ? "ml-auto justify-end" : "mr-auto justify-start"}`}
+            className={`flex gap-2.5 max-w-full ${m.role === "user" ? "ml-auto justify-end" : "mr-auto justify-start"}`}
           >
             {m.role === "assistant" && (
-              <div className="w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0 mt-1">
+              <div className="w-7 h-7 rounded-full bg-teal/10 border border-teal/25 flex items-center justify-center text-teal shrink-0 mt-1">
                 <Bot className="w-4 h-4" />
               </div>
             )}
 
             <div
-              className={`p-4 rounded-2xl text-xs leading-relaxed max-w-2xl ${
+              className={`p-3.5 rounded-2xl text-xs leading-relaxed max-w-[88%] sm:max-w-[82%] shadow-sm ${
                 m.role === "user"
-                  ? "bg-blue-600 text-white font-medium rounded-tr-none shadow-md"
-                  : "bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none shadow-lg"
+                  ? "bg-accent text-white font-medium rounded-tr-none shadow-sm shadow-accent/20"
+                  : "bg-surface-0 border border-border text-text-primary rounded-tl-none"
               }`}
             >
-              {/* If message is a structured report */}
+              {/* Structured Report Banner if message is a generated report */}
               {m.isReport && (
-                <div className="mb-3 pb-3 border-b border-slate-800">
+                <div className="mb-3 pb-3 border-b border-border">
                   <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
-                    <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5 bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-500/30">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      Official Report Prepared
+                    <span className="text-[11px] font-bold text-success flex items-center gap-1.5 bg-success/10 px-2.5 py-1 rounded-lg border border-success/20">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                      Official Report Synthesized
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-text-tertiary font-mono truncate max-w-[200px]">
                       {m.base_name}
                     </span>
                   </div>
@@ -432,33 +632,33 @@ export default function ChatAssistant({
                         <a
                           href={typeof m.files.docx === "string" ? m.files.docx : m.files.docx?.url}
                           download
-                          className="flex items-center gap-1 px-2.5 py-1 bg-blue-600/25 hover:bg-blue-600/40 border border-blue-500/40 text-blue-200 rounded-lg text-[11px] font-medium transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-info/10 hover:bg-info/20 border border-info/30 text-info rounded-lg text-[11px] font-medium transition-colors"
                         >
-                          <FileText className="w-3 h-3 text-blue-400" />
+                          <FileText className="w-3 h-3 text-info" />
                           <span>Word (.docx)</span>
-                          <Download className="w-2.5 h-2.5 text-blue-300 ml-0.5" />
+                          <Download className="w-2.5 h-2.5 ml-0.5" />
                         </a>
                       )}
                       {m.files.pdf && (
                         <a
                           href={typeof m.files.pdf === "string" ? m.files.pdf : m.files.pdf?.url}
                           download
-                          className="flex items-center gap-1 px-2.5 py-1 bg-red-600/25 hover:bg-red-600/40 border border-red-500/40 text-red-200 rounded-lg text-[11px] font-medium transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-amber/10 hover:bg-amber/20 border border-amber/30 text-amber rounded-lg text-[11px] font-medium transition-colors"
                         >
-                          <Shield className="w-3 h-3 text-red-400" />
+                          <Shield className="w-3 h-3 text-amber" />
                           <span>PDF (.pdf)</span>
-                          <Download className="w-2.5 h-2.5 text-red-300 ml-0.5" />
+                          <Download className="w-2.5 h-2.5 ml-0.5" />
                         </a>
                       )}
                       {m.files.markdown && (
                         <a
                           href={typeof m.files.markdown === "string" ? m.files.markdown : m.files.markdown?.url}
                           download
-                          className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-200 rounded-lg text-[11px] font-medium transition-colors"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-surface-2 hover:bg-surface-3 border border-border text-text-primary rounded-lg text-[11px] font-medium transition-colors"
                         >
-                          <FileCode className="w-3 h-3 text-emerald-400" />
+                          <FileCode className="w-3 h-3 text-text-secondary" />
                           <span>Markdown (.md)</span>
-                          <Download className="w-2.5 h-2.5 text-emerald-300 ml-0.5" />
+                          <Download className="w-2.5 h-2.5 ml-0.5" />
                         </a>
                       )}
                     </div>
@@ -471,31 +671,37 @@ export default function ChatAssistant({
                 {renderContent(m.content)}
               </div>
 
-              {/* Citations block */}
+              {/* Verified Citations block */}
               {m.citations && m.citations.length > 0 && (
-                <div className="mt-3.5 pt-3 border-t border-slate-800 space-y-1.5">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-amber-400" />
-                    <span>Verified Official Citations (Click to Audit PDF):</span>
+                <div className="mt-3 pt-2.5 border-t border-border space-y-1.5">
+                  <div className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-amber" />
+                    <span>Spatial Citations (Click to View in PDF):</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {m.citations.map((c, i) => {
                       const docName = String(c?.source || c?.file_id || "Document.pdf").replace(".pdf", "");
                       const pageNo = c?.page_number || 1;
+                      const isSelected = activeCitation?.bbox && activeCitation.source === c?.source && activeCitation.page_number === c?.page_number;
                       return (
                         <button
                           key={i}
                           onClick={() => onSelectCitation && onSelectCitation(c, m.citations)}
-                          className={`text-[10.5px] px-2.5 py-1 rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
-                            activeCitation?.bbox && activeCitation.source === c?.source && activeCitation.page_number === c?.page_number
-                              ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm"
-                              : "bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border-slate-700"
+                          className={`text-[11px] px-2.5 py-1.5 rounded-xl border flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
+                            isSelected
+                              ? "bg-amber/20 text-amber border-amber shadow-sm shadow-amber/20 ring-1 ring-amber/50 font-bold"
+                              : "bg-surface-0 hover:bg-surface-2 text-text-primary border-border hover:border-accent/40"
                           }`}
-                          title={c?.exact_snippet || c?.text || docName}
+                          title={`[REF #${i + 1}] ${docName} • Page ${pageNo}: ${c?.exact_snippet || c?.text || ""}`}
                         >
-                          <FileText className="w-3 h-3 text-blue-400 shrink-0" />
-                          <span className="font-semibold">{docName}</span>
-                          <span className="text-amber-400 font-mono">P.{pageNo}</span>
+                          <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 rounded bg-accent/10 text-accent border border-accent/25 shrink-0">
+                            REF #{i + 1}
+                          </span>
+                          <FileText className="w-3.5 h-3.5 text-accent shrink-0" />
+                          <span className="font-semibold truncate max-w-[130px]">{docName}</span>
+                          <span className="text-amber font-mono font-bold text-[10px] px-1.5 py-0.2 rounded bg-amber/10 border border-amber/25 shrink-0">
+                            P.{pageNo}
+                          </span>
                         </button>
                       );
                     })}
@@ -503,23 +709,10 @@ export default function ChatAssistant({
                 </div>
               )}
 
-              {/* Model & Latency */}
-              {m.role === "assistant" && m.model && (
-                <div className="mt-2 text-[10px] text-slate-400 flex items-center justify-between border-t border-slate-800 pt-1.5">
-                  <span className="flex items-center gap-1">
-                    <Zap className="w-3 h-3 text-amber-400" /> {m.model}
-                  </span>
-                  {m.latency_ms && (
-                    <span className="flex items-center gap-1 text-slate-400 font-mono">
-                      <Clock className="w-3 h-3" /> {m.latency_ms} ms
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
 
             {m.role === "user" && (
-              <div className="w-7 h-7 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-slate-200 shrink-0 mt-1">
+              <div className="w-7 h-7 rounded-full bg-surface-3 border border-border flex items-center justify-center text-text-primary shrink-0 mt-1">
                 <User className="w-4 h-4" />
               </div>
             )}
@@ -527,60 +720,35 @@ export default function ChatAssistant({
         ))}
 
         {loading && (
-          <div className="flex gap-3 items-center text-slate-400 text-xs p-2">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span>Retrieving official documents & preparing answer...</span>
+          <div className="flex gap-2.5 items-center text-text-secondary text-xs p-2">
+            <div className="w-4 h-4 border-2 border-teal border-t-transparent rounded-full animate-spin shrink-0" />
+            <span>Searching documents & synthesizing analysis...</span>
           </div>
         )}
 
         {generatingReport && (
-          <div className="flex gap-3 items-center text-slate-300 text-xs p-3 bg-blue-950/30 border border-blue-500/30 rounded-xl">
-            <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-            <span>Synthesizing official technical report across 100+ documents and building Word/PDF files...</span>
+          <div className="flex gap-2.5 items-center text-text-secondary text-xs p-3 bg-teal/10 border border-teal/20 rounded-xl">
+            <div className="w-4 h-4 border-2 border-amber border-t-transparent rounded-full animate-spin shrink-0" />
+            <span>Compiling structured technical report and generating DOCX/PDF artifacts...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Built-in Report Templates Bar (Directly Above Prompt Input) */}
-      <div className="px-4 py-2 bg-slate-950/70 border-t border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar">
-        <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
-          <FileCheck className="w-3 h-3 text-blue-400" /> Report Templates:
-        </span>
-        {reportTemplates.map((tpl) => {
-          const TIcon = tpl.icon;
-          return (
-            <button
-              key={tpl.id}
-              onClick={() => {
-                setQuery(tpl.prompt);
-                handleGenerateReportDirect(tpl.prompt, tpl.id);
-              }}
-              disabled={loading || generatingReport}
-              className="text-[11px] bg-slate-800/90 hover:bg-blue-600/30 hover:border-blue-500/40 text-slate-200 px-2.5 py-1 rounded-lg whitespace-nowrap border border-slate-700 transition-all flex items-center gap-1.5 shrink-0"
-              title={`Click to instantly generate ${tpl.label} report`}
-            >
-              <TIcon className="w-3 h-3 text-blue-400" />
-              <span>{tpl.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Floating Prompt Bar (With Direct "Generate Report" Button) */}
-      <div className="p-3 bg-slate-950 border-t border-slate-800">
+      {/* Pro Chatbot Input Bar (With '+' Actions Popover & Web Speech Mic) */}
+      <div className="p-3 bg-surface-1 border-t border-border relative shrink-0">
         {!apiKey ? (
-          <div className="flex items-center justify-between p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-200">
+          <div className="flex items-center justify-between p-2.5 bg-amber/10 border border-amber/30 rounded-xl text-xs text-amber">
             <div className="flex items-center gap-2">
-              <Key className="w-4 h-4 text-amber-400" />
-              <span>Groq API Key Required for AI inference and report generation.</span>
+              <Key className="w-4 h-4 text-amber shrink-0" />
+              <span>Groq API Key Required for model inference and report generation.</span>
             </div>
             <button
               onClick={onOpenKeyModal}
-              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs transition-colors"
+              className="bg-accent hover:bg-accent-hover text-white font-semibold px-3 py-1 rounded-lg text-xs transition-colors"
             >
-              Set Key
+              Configure Key
             </button>
           </div>
         ) : (
@@ -589,35 +757,103 @@ export default function ChatAssistant({
               e.preventDefault();
               handleSend();
             }}
-            className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-full px-3 py-1.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 shadow-inner"
+            id="tour-chat-input"
+            className="relative flex items-center gap-1.5 bg-surface-0 border border-border rounded-full px-2.5 py-1.5 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/25 shadow-sm transition-all"
           >
+            {/* Pro Chatbot '+' Action Button */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowActionsPopover(!showActionsPopover)}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                  showActionsPopover
+                    ? "bg-accent text-white rotate-45 shadow-sm"
+                    : "bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-text-primary"
+                }`}
+                title="Actions & Report Presets"
+                aria-label="Open Actions Menu"
+              >
+                <Plus className="w-4 h-4 transition-transform duration-200" />
+              </button>
+
+              {/* Actions Popover Menu */}
+              {showActionsPopover && (
+                <div
+                  ref={actionsPopoverRef}
+                  className="absolute bottom-10 left-0 w-80 bg-surface-0 border border-border rounded-2xl shadow-2xl p-2 z-50 animate-fade-in space-y-1"
+                >
+                  <div className="px-2.5 py-1 text-[10px] font-bold text-text-tertiary uppercase tracking-wider">
+                    Quick Actions & Reports
+                  </div>
+                  {quickActionOptions.map((opt) => {
+                    const OptIcon = opt.icon;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={opt.action}
+                        className="w-full text-left p-2 rounded-xl hover:bg-surface-2 transition-colors flex items-start gap-2.5 group"
+                      >
+                        <div className="p-1.5 rounded-lg bg-accent/10 text-accent group-hover:bg-accent/20 shrink-0">
+                          <OptIcon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-text-primary group-hover:text-accent transition-colors truncate">
+                            {opt.title}
+                          </div>
+                          <div className="text-[10.5px] text-text-tertiary line-clamp-1">
+                            {opt.desc}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  <div className="pt-1 border-t border-border mt-1">
+                    <button
+                      type="button"
+                      onClick={handleNewChat}
+                      className="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-status-error/10 text-status-error text-xs font-medium flex items-center gap-2 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear Chat Thread</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Prompt Text Input */}
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ask a question, or type a report topic to generate..."
-              className="flex-1 bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none py-1 pl-2"
+              placeholder="Ask about coal production, stratigraphy, or type report topic..."
+              className="flex-1 bg-transparent text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none py-1 px-1.5 min-w-0"
               disabled={loading || generatingReport}
             />
 
-            {/* Direct Generate Report Button */}
+            {/* Voice Input / Mic Button */}
             <button
               type="button"
-              onClick={() => handleGenerateReportDirect(query)}
-              disabled={loading || generatingReport}
-              className="px-3 py-1.5 rounded-full bg-slate-800 hover:bg-blue-600/30 text-blue-300 hover:text-white border border-blue-500/30 font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm shrink-0"
-              title="Generate a full official report (.docx, .pdf, .md) based on this prompt"
+              onClick={toggleListening}
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                isListening
+                  ? "bg-status-error text-white animate-pulse shadow-md shadow-status-error/30"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+              }`}
+              title={isListening ? "Listening... click to stop" : "Voice Input (Microphone)"}
+              aria-label="Toggle Voice Input"
             >
-              <FileCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden sm:inline">Generate Report</span>
+              {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Standard Send Button */}
+            {/* Send Button */}
             <button
               type="submit"
               disabled={loading || generatingReport || !query.trim()}
-              className="w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center disabled:opacity-40 transition-colors shadow shrink-0"
+              className="w-7 h-7 rounded-full bg-accent hover:bg-accent-hover text-white flex items-center justify-center disabled:opacity-40 transition-colors shadow shrink-0"
               title="Send Inquiry"
+              aria-label="Send Query"
             >
               <ArrowUp className="w-4 h-4" />
             </button>
@@ -625,92 +861,175 @@ export default function ChatAssistant({
         )}
       </div>
 
-      {/* Report History Modal / Overlay */}
+      {/* Unified History Modal: Dual Tabbed (Chat Sessions + Report Archives) */}
       {showHistory && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-surface-0 border border-border rounded-2xl max-w-2xl w-full p-5 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border pb-3 shrink-0">
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-blue-400" />
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Generated Reports History ({reportsHistory.length})
+                <History className="w-4 h-4 text-accent" />
+                <h2 className="text-sm font-bold text-text-primary">
+                  Intelligence & Activity History
                 </h2>
               </div>
               <button
                 onClick={() => setShowHistory(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="text-text-tertiary hover:text-text-primary p-1 rounded-lg hover:bg-surface-2"
+                aria-label="Close History"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-              {loadingHistory ? (
-                <div className="text-center py-8 text-slate-400 text-xs">
-                  Loading report archives...
-                </div>
-              ) : reportsHistory.length === 0 ? (
-                <div className="text-center py-12 text-slate-500 space-y-2">
-                  <FileSpreadsheet className="w-10 h-10 mx-auto text-slate-700 stroke-1" />
-                  <p className="text-xs font-semibold text-slate-300">No Generated Reports Yet</p>
-                  <p className="text-[11px]">Type a prompt and click "Generate Report" in the chat to synthesize official reports.</p>
-                </div>
-              ) : (
-                reportsHistory.map((rep, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
-                  >
-                    <div>
-                      <div className="text-xs font-bold text-slate-200">
-                        {rep.title}
-                      </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        Generated on {rep.date} • {rep.size_kb} KB
-                      </div>
-                    </div>
+            {/* Dual Tabs: Chat Sessions vs Generated Reports */}
+            <div className="flex items-center gap-2 border-b border-border pb-2 shrink-0">
+              <button
+                onClick={() => setHistoryTab("chats")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  historyTab === "chats"
+                    ? "bg-accent/15 text-accent border border-accent/30"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                }`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Chat Sessions ({chatSessions.length})</span>
+              </button>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {rep.files?.docx && (
-                        <a
-                          href={rep.files.docx}
-                          download
-                          className="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded text-[10.5px] font-medium flex items-center gap-1"
-                        >
-                          <FileText className="w-3 h-3 text-blue-400" />
-                          <span>DOCX</span>
-                        </a>
-                      )}
-                      {rep.files?.pdf && (
-                        <a
-                          href={rep.files.pdf}
-                          download
-                          className="px-2 py-1 bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 rounded text-[10.5px] font-medium flex items-center gap-1"
-                        >
-                          <Shield className="w-3 h-3 text-red-400" />
-                          <span>PDF</span>
-                        </a>
-                      )}
-                      {rep.files?.markdown && (
-                        <a
-                          href={rep.files.markdown}
-                          download
-                          className="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 rounded text-[10.5px] font-medium flex items-center gap-1"
-                        >
-                          <FileCode className="w-3 h-3 text-emerald-400" />
-                          <span>MD</span>
-                        </a>
-                      )}
-                    </div>
+              <button
+                onClick={() => setHistoryTab("reports")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  historyTab === "reports"
+                    ? "bg-accent/15 text-accent border border-accent/30"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                }`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Generated Reports ({reportsHistory.length})</span>
+              </button>
+            </div>
+
+            {/* Tab Body */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
+              {historyTab === "chats" ? (
+                chatSessions.length === 0 ? (
+                  <div className="text-center py-12 text-text-tertiary space-y-2">
+                    <MessageSquare className="w-8 h-8 mx-auto text-text-tertiary/60 stroke-1" />
+                    <p className="text-xs font-semibold text-text-secondary">No Saved Chat Sessions</p>
+                    <p className="text-[11px]">Conversations with user queries are automatically saved here.</p>
                   </div>
-                ))
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center px-1 pb-1">
+                      <span className="text-[11px] text-text-tertiary">Select a conversation to resume:</span>
+                      <button
+                        onClick={handleClearAllSessions}
+                        className="text-[10px] text-status-error hover:underline flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" /> Clear All
+                      </button>
+                    </div>
+                    {chatSessions.map((sess) => (
+                      <div
+                        key={sess.id}
+                        onClick={() => handleLoadSession(sess)}
+                        className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 group ${
+                          currentSessionId === sess.id
+                            ? "bg-accent/10 border-accent/40 text-accent font-semibold"
+                            : "bg-surface-1/60 hover:bg-surface-2 border-border text-text-primary"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <MessageSquare className="w-4 h-4 text-accent shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold truncate group-hover:text-accent transition-colors">
+                              {sess.title}
+                            </div>
+                            <div className="text-[10px] text-text-tertiary">
+                              {new Date(sess.updatedAt || sess.createdAt).toLocaleString()} &bull; {sess.messages?.length || 0} messages
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => handleDeleteSession(e, sess.id)}
+                          className="p-1 rounded-md text-text-tertiary hover:text-status-error hover:bg-status-error/10 transition-colors shrink-0"
+                          title="Delete this session"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                loadingReports ? (
+                  <div className="text-center py-8 text-text-tertiary text-xs">
+                    Loading report archives...
+                  </div>
+                ) : reportsHistory.length === 0 ? (
+                  <div className="text-center py-12 text-text-tertiary space-y-2">
+                    <FileSpreadsheet className="w-8 h-8 mx-auto text-text-tertiary/60 stroke-1" />
+                    <p className="text-xs font-semibold text-text-secondary">No Generated Reports Yet</p>
+                    <p className="text-[11px]">Use the '+' button in chat or the Report Builder to synthesize official documents.</p>
+                  </div>
+                ) : (
+                  reportsHistory.map((rep, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-surface-1/60 border border-border rounded-xl hover:border-accent/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-text-primary truncate">
+                          {rep.title}
+                        </div>
+                        <div className="text-[10px] text-text-tertiary mt-0.5">
+                          Generated on {rep.date} &bull; {rep.size_kb} KB
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {rep.files?.docx && (
+                          <a
+                            href={rep.files.docx}
+                            download
+                            className="px-2 py-1 bg-info/10 hover:bg-info/20 text-info border border-info/25 rounded text-[10.5px] font-medium flex items-center gap-1"
+                          >
+                            <FileText className="w-3 h-3" />
+                            <span>DOCX</span>
+                          </a>
+                        )}
+                        {rep.files?.pdf && (
+                          <a
+                            href={rep.files.pdf}
+                            download
+                            className="px-2 py-1 bg-amber/10 hover:bg-amber/20 text-amber border border-amber/25 rounded text-[10.5px] font-medium flex items-center gap-1"
+                          >
+                            <Shield className="w-3 h-3" />
+                            <span>PDF</span>
+                          </a>
+                        )}
+                        {rep.files?.markdown && (
+                          <a
+                            href={rep.files.markdown}
+                            download
+                            className="px-2 py-1 bg-surface-0 hover:bg-surface-2 text-text-primary border border-border rounded text-[10.5px] font-medium flex items-center gap-1"
+                          >
+                            <FileCode className="w-3 h-3" />
+                            <span>MD</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )
               )}
             </div>
 
-            <div className="pt-2 border-t border-slate-800 flex justify-end">
+            {/* Footer */}
+            <div className="pt-2 border-t border-border flex justify-end shrink-0">
               <button
                 onClick={() => setShowHistory(false)}
-                className="text-xs text-slate-300 hover:text-white bg-slate-800 px-3.5 py-1.5 rounded-xl"
+                className="text-xs text-text-secondary hover:text-text-primary bg-surface-2 px-3.5 py-1.5 rounded-xl transition-colors"
               >
                 Close History
               </button>

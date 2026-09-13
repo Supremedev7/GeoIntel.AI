@@ -1,0 +1,400 @@
+{
+  "benchmark_date": "2026-09-12T15:07:58.002470",
+  "total_queries": 25,
+  "passed": 20,
+  "failed": 5,
+  "accuracy_pct": 80.0,
+  "keyword_match_pct": 44.1,
+  "citation_hit_rate_pct": 100.0,
+  "avg_latency_s": 0.06,
+  "total_latency_s": 1.53,
+  "category_breakdown": {
+    "cbm": "1/3 (33%)",
+    "geological": "4/5 (80%)",
+    "infrastructure": "1/3 (33%)",
+    "policy": "3/3 (100%)",
+    "production": "5/5 (100%)",
+    "safety": "2/2 (100%)",
+    "subsidiary": "4/4 (100%)"
+  },
+  "results": [
+    {
+      "query_id": 1,
+      "query": "What is the total coal production of Coal India Limited?",
+      "category": "production",
+      "answer_length": 70,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "production",
+        "mt"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.39,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 2,
+      "query": "What is the stripping ratio for MCL?",
+      "category": "production",
+      "answer_length": 889,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "stripping",
+        "ratio"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.04,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 3,
+      "query": "How much coal did SECL produce from opencast mines?",
+      "category": "production",
+      "answer_length": 317,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "opencast",
+        "production"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 4,
+      "query": "What is the overburden removal volume achieved by CIL?",
+      "category": "production",
+      "answer_length": 1274,
+      "keyword_score": 0.33,
+      "matched_keywords": [
+        "cum"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.04,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 5,
+      "query": "What are the production targets for NCL?",
+      "category": "production",
+      "answer_length": 1280,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "ncl",
+        "production"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 6,
+      "query": "Explain the Barakar formation in the context of coal exploration.",
+      "category": "geological",
+      "answer_length": 2293,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "formation",
+        "coal"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 7,
+      "query": "How much exploratory drilling did CMPDI achieve?",
+      "category": "geological",
+      "answer_length": 113,
+      "keyword_score": 0.0,
+      "matched_keywords": [],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.03,
+      "pass": false,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 8,
+      "query": "Describe the Gondwana stratigraphy relevant to coal deposits.",
+      "category": "geological",
+      "answer_length": 388,
+      "keyword_score": 0.33,
+      "matched_keywords": [
+        "coal"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.04,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 9,
+      "query": "What geological formations contain the Raniganj coal measures?",
+      "category": "geological",
+      "answer_length": 268,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "formation",
+        "coal"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 10,
+      "query": "What is the significance of borehole logging in coal exploration?",
+      "category": "geological",
+      "answer_length": 1929,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "borehole",
+        "coal"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.06,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 11,
+      "query": "What is the CBM potential in Jharia coalfield?",
+      "category": "cbm",
+      "answer_length": 727,
+      "keyword_score": 0.0,
+      "matched_keywords": [],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.06,
+      "pass": false,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 12,
+      "query": "Describe coal beneficiation and washery operations.",
+      "category": "cbm",
+      "answer_length": 2223,
+      "keyword_score": 0.33,
+      "matched_keywords": [
+        "coal"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 13,
+      "query": "What is the gas-in-place estimate for deep Gondwana blocks?",
+      "category": "cbm",
+      "answer_length": 1270,
+      "keyword_score": 0.0,
+      "matched_keywords": [],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.06,
+      "pass": false,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 14,
+      "query": "What are the safety protocols for opencast mines?",
+      "category": "safety",
+      "answer_length": 267,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "safety",
+        "mine"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 15,
+      "query": "What environmental regulations apply to coal mining operations?",
+      "category": "safety",
+      "answer_length": 342,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "environmental",
+        "mining"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 16,
+      "query": "What is First Mile Connectivity in coal dispatch?",
+      "category": "infrastructure",
+      "answer_length": 206,
+      "keyword_score": 0.0,
+      "matched_keywords": [],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.04,
+      "pass": false,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 17,
+      "query": "How many rakes per day does CIL dispatch?",
+      "category": "infrastructure",
+      "answer_length": 393,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "rakes",
+        "day"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.04,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 18,
+      "query": "Describe the Heavy Earth Moving Machinery used in opencast mining.",
+      "category": "infrastructure",
+      "answer_length": 409,
+      "keyword_score": 0.0,
+      "matched_keywords": [],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": false,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 19,
+      "query": "Compare production performance across CIL subsidiaries.",
+      "category": "subsidiary",
+      "answer_length": 238,
+      "keyword_score": 0.33,
+      "matched_keywords": [
+        "production"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 20,
+      "query": "What is the underground mining contribution of ECL?",
+      "category": "subsidiary",
+      "answer_length": 2513,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "underground",
+        "mining"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 21,
+      "query": "Describe the operational profile of CCL.",
+      "category": "subsidiary",
+      "answer_length": 2151,
+      "keyword_score": 0.33,
+      "matched_keywords": [
+        "production"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 22,
+      "query": "What is the growth trajectory of BCCL?",
+      "category": "subsidiary",
+      "answer_length": 403,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "bccl",
+        "growth"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.04,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 23,
+      "query": "What are the mine plan guidelines from the Ministry of Coal?",
+      "category": "policy",
+      "answer_length": 1430,
+      "keyword_score": 0.67,
+      "matched_keywords": [
+        "mine",
+        "plan"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 24,
+      "query": "Describe the coal gasification initiatives in India.",
+      "category": "policy",
+      "answer_length": 886,
+      "keyword_score": 0.33,
+      "matched_keywords": [
+        "coal"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.05,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    },
+    {
+      "query_id": 25,
+      "query": "What policies support coal sector digital transformation?",
+      "category": "policy",
+      "answer_length": 157,
+      "keyword_score": 0.33,
+      "matched_keywords": [
+        "coal"
+      ],
+      "has_citation": true,
+      "citation_count": 3,
+      "latency_s": 0.04,
+      "pass": true,
+      "model": "offline-chroma-retriever"
+    }
+  ]
+}

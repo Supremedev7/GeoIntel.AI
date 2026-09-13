@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import { AppProvider } from './contexts/AppContext.jsx'
 import './index.css'
 
 // Global error handlers to capture client-side crashes and log to backend
@@ -69,17 +70,17 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center font-sans">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-lg w-full shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto">
+        <div className="min-h-screen bg-surface-0 text-text-primary flex flex-col items-center justify-center p-6 text-center font-sans">
+          <div className="bg-surface-1 border border-surface-2 rounded-3xl p-8 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-status-warning/10 border border-status-warning/30 flex items-center justify-center text-status-warning mx-auto">
               <span className="text-xl font-bold">!</span>
             </div>
             <h2 className="text-xl font-bold text-white">CMPDI Portal Recovered</h2>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-text-secondary leading-relaxed">
               A temporary interface issue occurred. The workspace state is preserved.
             </p>
             {this.state.error && (
-              <pre className="text-left bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-red-400 overflow-x-auto max-h-48">
+              <pre className="text-left bg-surface-0 p-3 rounded-xl border border-surface-2 text-[11px] font-mono text-status-error overflow-x-auto max-h-48">
                 {this.state.error.toString()}
               </pre>
             )}
@@ -92,7 +93,7 @@ class ErrorBoundary extends React.Component {
                 } catch (e) {}
                 window.location.reload();
               }}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow"
+              className="w-full bg-accent hover:bg-accent-hover text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow"
             >
               Reload Application
             </button>
@@ -106,6 +107,8 @@ class ErrorBoundary extends React.Component {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <ErrorBoundary>
-    <App />
+    <AppProvider>
+      <App />
+    </AppProvider>
   </ErrorBoundary>,
 )

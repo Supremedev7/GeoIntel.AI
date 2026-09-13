@@ -1,4 +1,4 @@
-# GeoIntel Core : Autonomous Multimodal Geological Intelligence System
+# GeoIntel.AI : Autonomous Multimodal Geological Intelligence System
 **Team Data Miners** | Smart India Hackathon 2026 | Problem Statement ID: **SIH26023**  
 *Ministry of Coal & Central Mine Planning & Design Institute (CMPDI) / Coal India Limited (CIL)*
 
@@ -71,22 +71,32 @@
 
 ## ⚡ Quick Start & Run
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-
-### Launching the Full System:
+### Option 1: Single-Command Docker Deployment (Recommended)
 ```bash
 # Clone the repository
-git clone https://github.com/Sankar7567/data_miners.git
-cd data_miners
+git clone https://github.com/Supremedev7/GeoIntel.AI.git
+cd GeoIntel.AI
+
+# Launch containerized stack (Frontend + Backend + Vector DB + OCR)
+docker compose up -d
+
+# Open in browser: http://localhost:8000
+```
+
+### Option 2: Local Development
+**Prerequisites:** Python 3.10+, Node.js 18+, Tesseract OCR
+```bash
+# Clone the repository
+git clone https://github.com/Supremedev7/GeoIntel.AI.git
+cd GeoIntel.AI
 
 # Launch both Backend (FastAPI :8000) and Frontend (Vite :5173)
 python3 run_demo.py
 ```
 
 ### Access Points:
-- **Web User Interface:** [http://localhost:5173](http://localhost:5173)
+- **Web User Interface (Local Dev):** [http://localhost:5173](http://localhost:5173)
+- **Production / Docker Combined:** [http://localhost:8000](http://localhost:8000)
 - **FastAPI REST API:** [http://localhost:8000](http://localhost:8000)
 - **Interactive OpenAPI / Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 

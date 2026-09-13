@@ -3,23 +3,127 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* CMPDI Coal Platform Official Palette - Light Mode */
+    --surface-0: #F6F7F5; /* App canvas behind cards */
+    --surface-1: #FFFFFF; /* Card and panel surface */
+    --surface-2: #ECEEF0; /* Subtle hover and secondary surface */
+    --surface-3: #DEE1E4; /* Hairline border / pressed */
+    
+    --text-primary: #1E2429; /* Primary body text */
+    --text-secondary: #555E67; /* Secondary readable text */
+    --text-tertiary: #88929C; /* Muted notes and labels */
+    
+    --accent: #0B3556; /* Institutional Navy */
+    --accent-hover: #082741; /* Navy, pressed */
+    --accent-muted: rgba(11, 53, 86, 0.08);
+    
+    --charcoal: #262A2E; /* Coal Charcoal */
+    --amber: #C98A2B; /* Energy Amber */
+    --teal: #1D7A72; /* Digital Teal */
+    --success: #2F8A4A; /* Success Green */
+    --warning: #E0A32E; /* Review Amber */
+    --error: #B23B2E; /* Rust Red */
+    --info: #4A7FAE; /* Steel Info Blue */
+    
+    --border: #DEE1E4; /* Hairline border */
+    --border-hover: #CBD0D6;
+  }
+
+  .dark {
+    /* CMPDI Coal Platform Official Palette - Dark Mode (Sleek, Borderless Floating Glass Aesthetic) */
+    --surface-0: #0E1217; /* Deep refined canvas behind floating cards */
+    --surface-1: #161B22; /* Elevated floating card surface */
+    --surface-2: #212730; /* Subtle hover and secondary surface */
+    --surface-3: #2C3542; /* Elevated hover / active pill */
+    
+    --text-primary: #F0F3F6; /* High contrast clean reading text */
+    --text-secondary: #A0AAB5; /* Secondary text */
+    --text-tertiary: #6E7987; /* Muted notes and metadata */
+    
+    --accent: #3A7FA8; /* Institutional Navy, dark mode adapted */
+    --accent-hover: #4D94BF; /* Navy hover */
+    --accent-muted: rgba(58, 127, 168, 0.15);
+    
+    --charcoal: #262A2E; /* Coal Charcoal */
+    --amber: #D99634; /* Energy Amber */
+    --teal: #238C83; /* Digital Teal */
+    --success: #38A359; /* Success Green */
+    --warning: #E0A32E; /* Review Amber */
+    --error: #C94537; /* Rust Red */
+    --info: #4A7FAE; /* Steel Info Blue */
+    
+    --border: rgba(255, 255, 255, 0.08); /* Subtle glass hairline border (no harsh grey line) */
+    --border-hover: rgba(255, 255, 255, 0.14);
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+  }
+
   body {
-    @apply bg-slate-950 text-slate-100 font-sans;
+    background-color: var(--surface-0);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
-/* Custom subtle scrollbars */
+@layer utilities {
+  .glass-panel {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+  }
+  
+  .dark .glass-panel {
+    background: rgba(15, 23, 42, 0.7);
+  }
+  
+  :root .glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Custom minimal scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.7);
-  border-radius: 3px;
+  background: var(--surface-3);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 1);
+  background: var(--border-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }

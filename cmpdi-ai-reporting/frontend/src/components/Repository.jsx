@@ -122,16 +122,16 @@ export default function Repository({
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Top Banner with Stats & Action Buttons */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950/40 to-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      <div className="bg-surface-1 border border-border rounded-2xl p-6 shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-2 border border-blue-500/30">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-semibold mb-2 border border-accent/20">
               <HardDrive className="w-3.5 h-3.5" /> Ministry & CMPDI Ingestion Harness
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
+            <h1 className="text-2xl font-bold text-text-primary tracking-tight">
               Official Document Repository & Ingestion Hub
             </h1>
-            <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+            <p className="text-xs text-text-secondary mt-1 max-w-2xl">
               Houses full-length public annual reports, mine plan guidelines, and geological volumes. All documents are parsed into high-dimensional ChromaDB vectors with PyMuPDF spatial coordinates.
             </p>
           </div>
@@ -139,7 +139,7 @@ export default function Repository({
           <div className="flex items-center gap-3">
             <button
               onClick={triggerLiveScraper}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 text-xs transition-colors"
+              className="bg-accent hover:bg-accent-hover text-white font-semibold px-4 py-2.5 rounded-xl shadow-md shadow-accent/25 flex items-center gap-2 text-xs transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               <span>Trigger Web Scraper</span>
@@ -148,36 +148,37 @@ export default function Repository({
         </div>
 
         {/* Repository Stats Summary */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-slate-800/80">
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Total Documents</div>
-            <div className="text-xl font-extrabold text-white mt-0.5">{availableFiles.length}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-border">
+          <div className="bg-surface-0 p-3 rounded-xl border border-border">
+            <div className="text-[10px] uppercase font-bold text-text-tertiary">Total Documents</div>
+            <div className="text-xl font-extrabold text-text-primary mt-0.5">{availableFiles.length}</div>
           </div>
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Total Scanned Pages</div>
-            <div className="text-xl font-extrabold text-blue-400 mt-0.5">{totalPages}</div>
+          <div className="bg-surface-0 p-3 rounded-xl border border-border">
+            <div className="text-[10px] uppercase font-bold text-text-tertiary">Total Scanned Pages</div>
+            <div className="text-xl font-extrabold text-accent mt-0.5">{totalPages}</div>
           </div>
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Indexed ChromaDB Vectors</div>
-            <div className="text-xl font-extrabold text-emerald-400 mt-0.5">{totalChunks}</div>
+          <div className="bg-surface-0 p-3 rounded-xl border border-border">
+            <div className="text-[10px] uppercase font-bold text-text-tertiary">Indexed ChromaDB Vectors</div>
+            <div className="text-xl font-extrabold text-status-success mt-0.5">{totalChunks}</div>
           </div>
-          <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Repository Volume</div>
-            <div className="text-xl font-extrabold text-amber-400 mt-0.5">{(totalSizeKB / 1024).toFixed(2)} MB</div>
+          <div className="bg-surface-0 p-3 rounded-xl border border-border">
+            <div className="text-[10px] uppercase font-bold text-text-tertiary">Repository Volume</div>
+            <div className="text-xl font-extrabold text-amber mt-0.5">{(totalSizeKB / 1024).toFixed(2)} MB</div>
           </div>
         </div>
       </div>
 
       {/* Drag and Drop Upload Zone */}
       <div
+        id="tour-upload-zone"
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
         className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
           dragActive
-            ? 'border-blue-500 bg-blue-600/10 scale-[1.01]'
-            : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+            ? 'border-accent bg-accent/10 scale-[1.01]'
+            : 'border-border bg-surface-0 hover:border-accent/40'
         }`}
       >
         <input
@@ -194,26 +195,26 @@ export default function Repository({
         />
 
         <div className="flex flex-col items-center justify-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+          <div className="w-12 h-12 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
             {uploading ? (
-              <RefreshCw className="w-6 h-6 animate-spin text-blue-400" />
+              <RefreshCw className="w-6 h-6 animate-spin text-accent" />
             ) : (
               <Upload className="w-6 h-6" />
             )}
           </div>
 
           <div>
-            <h3 className="text-sm font-bold text-white">
+            <h3 className="text-sm font-bold text-text-primary">
               {uploading ? 'Parsing PDF & Building Spatial Vectors...' : 'Drag & Drop Manual PDF Documents Here'}
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-text-tertiary mt-0.5">
               Supports CIL annual reports, mine plans, EIA studies, and DGMS circulars.
             </p>
           </div>
 
           <label
             htmlFor="pdfUploadInput"
-            className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-xl border border-slate-700 transition-colors shadow-sm"
+            className="cursor-pointer bg-surface-2 hover:bg-surface-3 text-text-primary text-xs font-semibold px-4 py-2 rounded-xl border border-border transition-colors shadow-sm"
           >
             Browse Files from Computer
           </label>
@@ -221,24 +222,24 @@ export default function Repository({
       </div>
 
       {uploadSuccess && (
-        <div className="flex items-center gap-2 p-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="flex items-center gap-2 p-3 bg-status-success/10 border border-status-success/30 text-status-success rounded-xl text-xs">
+          <CheckCircle2 className="w-4 h-4 text-status-success shrink-0" />
           <span>{uploadSuccess}</span>
         </div>
       )}
 
       {uploadError && (
-        <div className="flex items-center gap-2 p-3 bg-red-950/40 border border-red-500/40 text-red-300 rounded-xl text-xs">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+        <div className="flex items-center gap-2 p-3 bg-status-error/10 border border-status-error/30 text-status-error rounded-xl text-xs">
+          <AlertCircle className="w-4 h-4 text-status-error shrink-0" />
           <span>{uploadError}</span>
         </div>
       )}
 
       {/* Grid of All Scraped & Uploaded Documents */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-          <span className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-blue-400" /> Ingested PDF Library ({availableFiles.length})
+        <div className="flex items-center justify-between text-xs text-text-tertiary px-1">
+          <span className="font-bold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
+            <FileText className="w-4 h-4 text-accent" /> Ingested PDF Library ({availableFiles.length})
           </span>
           <span>Click "Audit in PDF Viewer" to inspect spatial text coordinates</span>
         </div>
@@ -254,48 +255,48 @@ export default function Repository({
             return (
               <div
                 key={fname || idx}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-3 hover:border-slate-700 transition-all flex flex-col justify-between"
+                className="bg-surface-1 border border-border rounded-2xl p-5 shadow-sm space-y-3 hover:border-border-hover transition-all flex flex-col justify-between"
               >
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
                       <FileText className="w-5 h-5" />
                     </div>
-                    <span className="text-[10px] bg-emerald-500/15 text-emerald-300 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                    <span className="text-[10px] bg-status-success/15 text-status-success font-semibold px-2.5 py-0.5 rounded-full border border-status-success/30 flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" /> Indexed
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-xs font-bold text-white line-clamp-2" title={fname}>
+                    <h3 className="text-xs font-bold text-text-primary line-clamp-2" title={fname}>
                       {fname}
                     </h3>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-1">
-                      <span className="text-blue-300 font-semibold">{pages} Pages</span>
+                    <div className="flex items-center gap-2 text-[11px] text-text-tertiary mt-1">
+                      <span className="text-accent font-semibold">{pages} Pages</span>
                       <span>&bull;</span>
                       <span>{size_kb > 1024 ? `${(size_kb/1024).toFixed(1)} MB` : `${size_kb} KB`}</span>
                       <span>&bull;</span>
-                      <span className="text-emerald-400 font-medium">{chunks} vectors</span>
+                      <span className="text-status-success font-medium">{chunks} vectors</span>
                     </div>
                   </div>
 
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-[10px] text-text-tertiary">
                     Last Updated: {upload_date}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-3 border-t border-slate-800/80">
+                <div className="flex items-center gap-2 pt-3 border-t border-border">
                   <button
                     onClick={() => onSelectForAudit && onSelectForAudit(fname)}
-                    className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 text-xs py-1.5 rounded-lg font-medium transition-colors text-center flex items-center justify-center gap-1"
+                    className="flex-1 bg-surface-2 hover:bg-surface-3 border border-border text-text-primary text-xs py-1.5 rounded-lg font-medium transition-colors text-center flex items-center justify-center gap-1"
                   >
-                    <Eye className="w-3.5 h-3.5" />
+                    <Eye className="w-3.5 h-3.5 text-accent" />
                     <span>Audit in Viewer</span>
                   </button>
                   <a
                     href={url}
                     download
-                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
+                    className="p-1.5 bg-surface-2 hover:bg-surface-3 text-text-secondary rounded-lg transition-colors border border-border"
                     title="Download Raw PDF"
                   >
                     <Download className="w-3.5 h-3.5" />
@@ -310,40 +311,40 @@ export default function Repository({
       {/* Live Web Scraper Progress & Terminal Modal */}
       {showScrapeModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-white font-bold text-sm">
-                <Terminal className="w-4 h-4 text-emerald-400" />
+          <div className="bg-surface-1 border border-border rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2 text-text-primary font-bold text-sm">
+                <Terminal className="w-4 h-4 text-teal" />
                 <span>Automated Coal Portal Scraper & Spatial Ingestion Terminal</span>
               </div>
               <button
                 onClick={() => setShowScrapeModal(false)}
-                className="text-slate-400 hover:text-white text-xs"
+                className="text-text-tertiary hover:text-text-primary text-xs"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-400">
+            <div className="flex items-center justify-between text-xs text-text-tertiary">
               <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${isScrapingActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+                <span className={`w-2 h-2 rounded-full ${isScrapingActive ? 'bg-status-success animate-pulse' : 'bg-surface-3'}`} />
                 <span>{isScrapingActive ? 'Scraping & Vector Ingestion in progress...' : 'Harness Idle / Ready'}</span>
               </div>
-              <span className="text-[11px] text-slate-500">Auto-refreshing live logs</span>
+              <span className="text-[11px] text-text-tertiary">Auto-refreshing live logs</span>
             </div>
 
             {/* Terminal Window */}
-            <div className="bg-slate-950 rounded-xl p-4 font-mono text-[11px] text-slate-300 h-80 overflow-y-auto space-y-1.5 border border-slate-800">
+            <div className="bg-surface-0 rounded-xl p-4 font-mono text-[11px] text-text-secondary h-80 overflow-y-auto space-y-1.5 border border-border">
               {scrapeLogs.length === 0 ? (
-                <div className="text-slate-500 italic">Connecting to scraper harness log stream...</div>
+                <div className="text-text-tertiary italic">Connecting to scraper harness log stream...</div>
               ) : (
                 scrapeLogs.map((log, i) => (
                   <div key={i} className="flex gap-2">
-                    <span className="text-slate-500 select-none">[{log.time}]</span>
+                    <span className="text-text-tertiary select-none">[{log.time}]</span>
                     <span className={
-                      log.level === 'SUCCESS' ? 'text-emerald-400 font-semibold' :
-                      log.level === 'WARNING' ? 'text-amber-400' :
-                      'text-slate-300'
+                      log.level === 'SUCCESS' ? 'text-status-success font-semibold' :
+                      log.level === 'WARNING' ? 'text-status-warning' :
+                      'text-text-secondary'
                     }>
                       {log.message}
                     </span>
@@ -353,13 +354,13 @@ export default function Repository({
               <div ref={logsEndRef} />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
               <button
                 onClick={() => {
                   setShowScrapeModal(false);
                   if (onRefresh) onRefresh();
                 }}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl text-xs font-semibold"
+                className="bg-surface-2 hover:bg-surface-3 text-text-primary px-4 py-2 rounded-xl text-xs font-semibold border border-border"
               >
                 Close Window
               </button>

@@ -11,11 +11,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = BASE_DIR / "backend"
 FRONTEND_DIR = BASE_DIR / "frontend"
+VENV_PYTHON = BACKEND_DIR / ".venv" / "bin" / "python"
 
-# Ensure PATH includes local bin (node/npm)
-NODE_BIN_DIR = Path("/home/sankar/snap/antigravity-cli/common/local/bin")
-if NODE_BIN_DIR.exists():
-    os.environ["PATH"] = f"{NODE_BIN_DIR}:{os.environ.get('PATH', '')}"
+# Auto-re-execute using the project virtualenv if running under system python
+if sys.prefix == sys.base_prefix and VENV_PYTHON.exists():
+    os.execv(str(VENV_PYTHON), [str(VENV_PYTHON)] + sys.argv)
 
 def log(step: str, msg: str):
     print(f"\033[1;34m[{step}]\033[0m {msg}")
@@ -38,7 +38,7 @@ def check_dependencies():
         print(f"\033[1;31m[ERROR]\033[0m Missing Python package: {e}")
         sys.exit(1)
 
-    node_bin = shutil.which("node") or "/home/sankar/snap/antigravity-cli/common/local/bin/node"
+    node_bin = shutil.which("node") or "node"
     node_ver = subprocess.check_output([node_bin, "--version"]).decode().strip()
     success(f"Node.js runtime verified: {node_ver}")
 
@@ -118,7 +118,7 @@ def start_servers():
     )
     procs.append(backend_proc)
 
-    npx_bin = shutil.which("npx") or "/home/sankar/snap/antigravity-cli/common/local/bin/npx"
+    npx_bin = shutil.which("npx") or "npx"
     frontend_proc = subprocess.Popen(
         [npx_bin, "vite", "--host", "0.0.0.0", "--port", "5173"],
         cwd=str(FRONTEND_DIR),

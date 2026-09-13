@@ -1,142 +1,264 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
-  Sparkles, CheckCircle2, ChevronRight, ChevronLeft, 
-  X, FolderArchive, MapPin, BarChart3, FileCheck, Layers, Play,
-  ArrowRight, MoveRight, CornerDownRight, Zap, Eye, Building2,
-  Database, Pickaxe, Compass, MousePointerClick, ShieldCheck,
-  Minimize2, Maximize2, ArrowDown
+  BarChart3, Cloud, Bot, Eye, FileCheck, 
+  FolderArchive, ChevronRight, ChevronLeft, X, 
+  Sparkles, ArrowUpRight
 } from "lucide-react";
 
-export default function OnboardingTour({ isOpen, onClose, onNavigateTab }) {
+export default function OnboardingTour({ 
+  isOpen, 
+  onClose, 
+  onNavigateTab,
+  onSelectCitation,
+  onAskAssistant,
+  availableFiles = []
+}) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isMinimized, setIsMinimized] = useState(false);
-
-  if (!isOpen) return null;
+  const [targetRect, setTargetRect] = useState(null);
+  const [popoverPos, setPopoverPos] = useState({ top: 100, left: 100 });
 
   const tourSteps = [
     {
+      id: "kpis",
       stepNumber: 1,
-      tab: "documents",
-      title: "Official Repository & Real Data Ingestion",
-      badge: "Architecture Phase 1 • Repository & Ingestion",
-      icon: FolderArchive,
-      color: "from-blue-600 to-indigo-600",
-      pointerText: "Look below: Use the Drag & Drop Zone to index new PDFs in real-time, or click 'Audit in Viewer' on any document card.",
-      pointerDirection: "down",
-      functionalMappings: [
-        {
-          button: "PDF Drag & Drop Zone",
-          arrowLabel: "Instant Vector Indexing",
-          action: "Drop or browse local PDFs below. Watch total documents and ChromaDB vectors increment live!"
-        },
-        {
-          button: "Audit in Viewer",
-          arrowLabel: "Loads Split-Screen",
-          action: "Click on any document card below to jump to Tab 1 with this PDF loaded on Page 1."
-        },
-        {
-          button: "Live Scraper Terminal",
-          arrowLabel: "Crawler Monitor",
-          action: "Click 'Trigger Web Scraper' above to view live crawler logs across Ministry archives."
-        }
-      ]
-    },
-    {
-      stepNumber: 2,
-      tab: "chat",
-      title: "Spatial PDF Audit & Dynamic Citation Highlighting",
-      badge: "Architecture Phase 2 • Verification & Citations",
-      icon: MapPin,
-      color: "from-amber-600 to-orange-600",
-      pointerText: "Left Panel: Ask questions in the prompt bar | Right Panel: Click any citation pill (e.g. P.1) to see its bounding box. Switch pages to see highlights dynamically disappear/reappear.",
-      pointerDirection: "split",
-      functionalMappings: [
-        {
-          button: "Spatial Citation Pills (P.X)",
-          arrowLabel: "Draws Bounding Box",
-          action: "Clicking a citation jumps the PDF to that page with an amber bounding box."
-        },
-        {
-          button: "Page Navigation (< / >)",
-          arrowLabel: "Dynamic Visibility",
-          action: "Navigating to non-cited pages cleanly removes the highlight and snippet card."
-        },
-        {
-          button: "Spatial View / PDF View",
-          arrowLabel: "Viewer Toggle",
-          action: "Switch between high-precision vector overlay and full inline browser PDF."
-        }
-      ]
-    },
-    {
-      stepNumber: 3,
       tab: "dashboard",
-      title: "Geological Analytics & Semantic Word Cloud",
-      badge: "Architecture Phase 3 • Semantic Intelligence",
+      selector: "#tour-kpis",
+      placement: "below",
+      title: "Live Operational KPIs",
       icon: BarChart3,
-      color: "from-emerald-600 to-teal-600",
-      pointerText: "Look below: Click any geological entity (e.g. Barakar, Overburden) in the Word Cloud to open its In-Place Occurrence Inspector with sentence citations.",
-      pointerDirection: "down",
-      functionalMappings: [
-        {
-          button: "Word Cloud Entity Chips",
-          arrowLabel: "Inspect Occurrences",
-          action: "Click any tag to see where it appears across all 100+ documents without leaving the page."
-        },
-        {
-          button: "Semantic Category Pills",
-          arrowLabel: "Domain Filters",
-          action: "Filter between Stratigraphy, CIL Subsidiaries, Extraction Tech, and Mining Metrics."
-        },
-        {
-          button: "Subsidiary Production Bars",
-          arrowLabel: "Operational Audit",
-          action: "Compare Opencast vs. Underground production volumes and stripping ratios across subsidiaries."
-        }
-      ]
+      accentBg: "bg-amber/15 text-amber",
+      desc: "Live coal production, drilling meterage, and overburden removal numbers aggregated directly from official Coal India reports."
     },
     {
-      stepNumber: 4,
-      tab: "reports",
-      title: "Autonomous Report Studio & In-Site PDF Preview",
-      badge: "Architecture Phase 4 • Synthesis & Export",
-      icon: FileCheck,
-      color: "from-purple-600 to-pink-600",
-      pointerText: "Look below: Type your custom directives in the text area below, click 'Generate Official Report', and preview the official PDF document directly inside the site!",
-      pointerDirection: "down",
-      functionalMappings: [
-        {
-          button: "Specific Directives Input",
-          arrowLabel: "Priority Synthesis",
-          action: "Your custom engineering comments strictly drive vector retrieval, titles, and section contents."
-        },
-        {
-          button: "Official PDF Preview Tab",
-          arrowLabel: "In-Browser Viewer",
-          action: "Click the 'Official PDF' tab on the right preview pane to inspect the formatted print PDF."
-        },
-        {
-          button: "Word / PDF / MD Export",
-          arrowLabel: "Instant Download",
-          action: "Download verified .docx, .pdf, and .md files with zero token burn."
+      id: "wordcloud",
+      stepNumber: 2,
+      tab: "dashboard",
+      selector: "#tour-word-cloud",
+      placement: "inside-top-right",
+      title: "Interactive Word Cloud",
+      icon: Cloud,
+      accentBg: "bg-teal/15 text-teal",
+      desc: "Visualizes the most frequent mining terms. Click on ANY keyword (like CCL, ECL, or Opencast) to instantly see every document and sentence where it appears."
+    },
+    {
+      id: "chat",
+      stepNumber: 3,
+      tab: "chat",
+      selector: "#tour-chat-input",
+      placement: "above",
+      title: "AI Geological Assistant",
+      icon: Bot,
+      accentBg: "bg-accent/15 text-accent",
+      desc: "Ask any question about mining plans, circulars, or subsidiaries in English, Hindi, Bengali, or Tamil to get instant verified answers.",
+      actionText: "Try Sample Question",
+      actionHandler: () => {
+        if (onAskAssistant) {
+          onAskAssistant("What are the coal production targets and stripping ratios for MCL?");
         }
-      ]
+      }
+    },
+    {
+      id: "viewer",
+      stepNumber: 4,
+      tab: "chat",
+      selector: "#tour-pdf-viewer",
+      placement: "inside-top-left",
+      title: "Split-Screen PDF & Exact Citations",
+      icon: Eye,
+      accentBg: "bg-amber/15 text-amber",
+      desc: "Every AI response includes clickable page citation pills (like P.1). Click any pill to jump straight to that page with an amber highlight box over the exact sentence.",
+      actionText: "Demo Citation Highlight",
+      actionHandler: () => {
+        if (onSelectCitation) {
+          const doc = availableFiles[0] || "Coal_Ministry_Mine_Plan_Guidelines.pdf";
+          onSelectCitation({
+            source: doc,
+            file_id: doc,
+            page_number: 1,
+            bbox: [100, 180, 480, 240],
+            exact_snippet: "Barakar formation coal exploration and overburden removal metrics."
+          });
+        }
+      }
+    },
+    {
+      id: "reports",
+      stepNumber: 5,
+      tab: "reports",
+      selector: "#tour-report-options",
+      placement: "right",
+      title: "One-Click Report Studio",
+      icon: FileCheck,
+      accentBg: "bg-success/15 text-success",
+      desc: "Select an archetype and target subsidiary, then click 'Generate' to synthesize full executive reports downloadable as Word (.docx) or PDF (.pdf)."
+    },
+    {
+      id: "repository",
+      stepNumber: 6,
+      tab: "documents",
+      selector: "#tour-upload-zone",
+      placement: "below",
+      title: "Document Archive & Ingestion",
+      icon: FolderArchive,
+      accentBg: "bg-accent/15 text-accent",
+      desc: "Drag and drop any mining PDF here to instantly index it into the system, or click 'Trigger Web Scraper' to fetch recent Ministry circulars."
     }
   ];
 
   const step = tourSteps[currentStep];
   const StepIcon = step.icon;
 
-  const goToStep = (idx) => {
-    setCurrentStep(idx);
-    if (onNavigateTab) {
-      onNavigateTab(tourSteps[idx].tab);
+  // Calculate position with strict boundary clamping to guarantee it NEVER goes offscreen
+  const updateTargetPosition = useCallback(() => {
+    if (!isOpen) return;
+    const current = tourSteps[currentStep];
+    const el = document.querySelector(current.selector);
+
+    const cardWidth = Math.min(360, window.innerWidth - 32);
+    const estimatedCardHeight = current.actionText ? 210 : 175;
+    const pad = 16;
+
+    if (!el) {
+      // Fallback: perfectly centered on screen
+      setTargetRect(null);
+      setPopoverPos({
+        top: Math.max(pad, (window.innerHeight - estimatedCardHeight) / 2),
+        left: Math.max(pad, (window.innerWidth - cardWidth) / 2)
+      });
+      return;
     }
-  };
+
+    const r = el.getBoundingClientRect();
+    const elemPad = 8;
+    const rect = {
+      top: Math.max(0, r.top - elemPad),
+      left: Math.max(0, r.left - elemPad),
+      width: r.width + elemPad * 2,
+      height: r.height + elemPad * 2,
+      bottom: r.bottom + elemPad,
+      right: r.right + elemPad,
+    };
+
+    setTargetRect(rect);
+
+    let top = 0;
+    let left = 0;
+
+    switch (current.placement) {
+      case "below":
+        top = rect.bottom + 14;
+        left = rect.left + (rect.width - cardWidth) / 2;
+        // If placing below exceeds screen bottom, place above
+        if (top + estimatedCardHeight > window.innerHeight - pad) {
+          top = Math.max(pad, rect.top - estimatedCardHeight - 14);
+        }
+        break;
+
+      case "above":
+        top = rect.top - estimatedCardHeight - 14;
+        left = rect.left + 20;
+        // If placing above goes off top, place below
+        if (top < pad) {
+          top = rect.bottom + 14;
+        }
+        break;
+
+      case "inside-top-right":
+        top = rect.top + 70;
+        left = rect.right - cardWidth - 24;
+        break;
+
+      case "inside-top-left":
+        top = rect.top + 60;
+        left = rect.left + 24;
+        break;
+
+      case "right":
+        top = rect.top + 16;
+        left = rect.right + 16;
+        // If placing right goes off screen, place inside or below
+        if (left + cardWidth > window.innerWidth - pad) {
+          left = rect.left + 20;
+          top = rect.bottom + 14;
+        }
+        break;
+
+      default:
+        top = rect.bottom + 14;
+        left = rect.left + (rect.width - cardWidth) / 2;
+        break;
+    }
+
+    // STRICT BOUNDARY CLAMPING: NEVER GOES OFFSCREEN IN ANY RESOLUTION
+    const clampedTop = Math.max(pad, Math.min(top, window.innerHeight - estimatedCardHeight - pad));
+    const clampedLeft = Math.max(pad, Math.min(left, window.innerWidth - cardWidth - pad));
+
+    setPopoverPos({ top: clampedTop, left: clampedLeft });
+  }, [isOpen, currentStep]);
+
+  // Navigate to tab and scroll to element
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const current = tourSteps[currentStep];
+    if (onNavigateTab && current.tab) {
+      onNavigateTab(current.tab);
+    }
+
+    const timer = setTimeout(() => {
+      const el = document.querySelector(current.selector);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+      updateTargetPosition();
+    }, 180);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, currentStep, onNavigateTab, updateTargetPosition]);
+
+  // Update position on window resize/scroll
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleResizeOrScroll = () => {
+      updateTargetPosition();
+    };
+
+    window.addEventListener("resize", handleResizeOrScroll);
+    window.addEventListener("scroll", handleResizeOrScroll, true);
+
+    return () => {
+      window.removeEventListener("resize", handleResizeOrScroll);
+      window.removeEventListener("scroll", handleResizeOrScroll, true);
+    };
+  }, [isOpen, updateTargetPosition]);
+
+  // Keyboard navigation (Left, Right, Escape)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrev();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, currentStep]);
 
   const handleNext = () => {
     if (currentStep < tourSteps.length - 1) {
-      goToStep(currentStep + 1);
+      setCurrentStep(currentStep + 1);
     } else {
       onClose();
     }
@@ -144,153 +266,149 @@ export default function OnboardingTour({ isOpen, onClose, onNavigateTab }) {
 
   const handlePrev = () => {
     if (currentStep > 0) {
-      goToStep(currentStep - 1);
+      setCurrentStep(currentStep - 1);
     }
   };
 
-  // Minimized floating pill bar
-  if (isMinimized) {
-    return (
-      <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-        <div className="bg-slate-900/95 border border-blue-500/60 shadow-2xl backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-3 text-xs text-slate-200">
-          <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-ping" />
-          <span className="font-semibold text-white">
-            GeoIntel Core Guide: Step {step.stepNumber} of {tourSteps.length} &bull; {step.title}
-          </span>
-          <button
-            onClick={() => setIsMinimized(false)}
-            className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-2.5 py-1 rounded-full text-[11px] transition-colors"
-          >
-            <Maximize2 className="w-3 h-3" /> Expand
-          </button>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white p-0.5 rounded-full hover:bg-slate-800 transition-colors"
-            title="Exit Tour"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed top-14 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl z-50 pointer-events-none animate-in fade-in slide-in-from-top-3 duration-200">
-      {/* Floating HUD Card (Pointer events enabled on card only, keeping background click-through!) */}
-      <div className="pointer-events-auto bg-slate-900/95 border-2 border-blue-500/60 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.85)] backdrop-blur-xl p-4 sm:p-5 text-white space-y-3.5 ring-1 ring-blue-400/20">
-        {/* Top Controls Row: Badge, Step Counter, Minimize, Close */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-300 bg-blue-500/20 px-2.5 py-0.5 rounded-full border border-blue-500/40 flex items-center gap-1.5 shadow-sm">
-              <Play className="w-3 h-3 fill-blue-400 text-blue-400" /> GeoIntel Core Walkthrough &bull; Team Data Miners
-            </span>
-            <span className="text-xs text-amber-300 font-mono font-bold bg-amber-950/40 border border-amber-500/40 px-2 py-0.5 rounded">
-              Step {step.stepNumber} of {tourSteps.length}
-            </span>
-            <span className="text-xs text-slate-300 font-semibold hidden sm:inline">
-              &bull; {step.badge}
-            </span>
-          </div>
+    <div className="fixed inset-0 z-50 pointer-events-auto select-none overflow-hidden">
+      {/* 1. Spotlight Overlay with SVG Cutout */}
+      <svg className="fixed inset-0 w-full h-full pointer-events-none transition-all duration-300">
+        <defs>
+          <mask id="tour-spotlight-mask">
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            {targetRect && (
+              <rect
+                x={targetRect.left}
+                y={targetRect.top}
+                width={targetRect.width}
+                height={targetRect.height}
+                rx="16"
+                ry="16"
+                fill="black"
+                className="transition-all duration-300 ease-out"
+              />
+            )}
+          </mask>
+        </defs>
+        <rect
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="rgba(0, 0, 0, 0.55)"
+          mask="url(#tour-spotlight-mask)"
+        />
+      </svg>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setIsMinimized(true)}
-              className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-colors text-xs flex items-center gap-1"
-              title="Minimize to top bar"
-            >
-              <Minimize2 className="w-4 h-4" />
-              <span className="hidden sm:inline text-[11px]">Minimize</span>
-            </button>
+      {/* 2. Glowing Halo Border around the target element */}
+      {targetRect && (
+        <div
+          style={{
+            position: "fixed",
+            top: targetRect.top,
+            left: targetRect.left,
+            width: targetRect.width,
+            height: targetRect.height,
+          }}
+          className="rounded-2xl pointer-events-none ring-2 ring-accent shadow-[0_0_25px_rgba(58,127,168,0.55)] transition-all duration-300 ease-out"
+        />
+      )}
+
+      {/* 3. Compact, Sweet & Simple Anchored Coachmark Card */}
+      <div
+        style={{
+          position: "fixed",
+          top: `${popoverPos.top}px`,
+          left: `${popoverPos.left}px`,
+        }}
+        className="w-[360px] max-w-[calc(100vw-2rem)] pointer-events-auto z-50 animate-in fade-in zoom-in-95 duration-200"
+        role="dialog"
+        aria-labelledby="tour-step-title"
+      >
+        <div className="bg-surface-1 dark:bg-[#181C20] border border-border rounded-2xl p-4 sm:p-4.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] backdrop-blur-2xl text-text-primary space-y-3">
+          
+          {/* Header Row: Icon, Step Badge, Title & Close */}
+          <div className="flex items-start justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`w-8 h-8 rounded-xl ${step.accentBg} flex items-center justify-center shrink-0 shadow-xs`}>
+                <StepIcon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-accent block">
+                  Step {step.stepNumber} of {tourSteps.length}
+                </span>
+                <h3 id="tour-step-title" className="text-sm font-bold text-text-primary truncate">
+                  {step.title}
+                </h3>
+              </div>
+            </div>
+
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
-              title="Exit Guide"
+              className="p-1 rounded-lg hover:bg-surface-2 text-text-tertiary hover:text-text-primary transition-colors cursor-pointer shrink-0"
+              title="Skip Tour"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
-        </div>
 
-        {/* Feature Title + Live Pointer Callout */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${step.color} flex items-center justify-center text-white shadow-lg shrink-0`}>
-              <StepIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                {step.stepNumber}. {step.title}
-              </h2>
-              <div className="flex items-center gap-1.5 text-xs text-amber-300 mt-0.5 font-medium">
-                <ArrowDown className="w-3.5 h-3.5 text-amber-400 animate-bounce shrink-0" />
-                <span>{step.pointerText}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* Sweet & Simple Description: What you need to know */}
+          <p className="text-xs text-text-secondary leading-relaxed pl-0.5">
+            {step.desc}
+          </p>
 
-        {/* Interactive Functional Controls Callouts Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-          {step.functionalMappings.map((m, idx) => (
-            <div 
-              key={idx}
-              className="bg-slate-950/85 border border-slate-800 hover:border-blue-500/50 rounded-xl p-2.5 space-y-1 shadow-sm transition-all"
+          {/* Optional Interactive Action Button */}
+          {step.actionText && step.actionHandler && (
+            <button
+              onClick={step.actionHandler}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-accent/10 hover:bg-accent/20 border border-accent/25 text-xs font-semibold text-accent transition-colors cursor-pointer shadow-xs"
             >
-              <div className="flex items-center justify-between gap-1 flex-wrap">
-                <span className="text-[10.5px] font-bold text-blue-300 bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded">
-                  {m.button}
-                </span>
-                <span className="text-[9.5px] text-amber-400 font-semibold uppercase">
-                  &rarr; {m.arrowLabel}
-                </span>
-              </div>
-              <p className="text-[10.5px] text-slate-300 leading-relaxed">
-                {m.action}
-              </p>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{step.actionText}</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </button>
+          )}
+
+          {/* Footer Controls: Step Dots, Back, Next */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/60 gap-2">
+            {/* Step Dots */}
+            <div className="flex items-center gap-1">
+              {tourSteps.map((s, idx) => (
+                <button
+                  key={s.id}
+                  onClick={() => setCurrentStep(idx)}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    currentStep === idx
+                      ? "w-4 bg-accent shadow-xs"
+                      : "w-1.5 bg-surface-3 hover:bg-text-tertiary/60"
+                  }`}
+                  title={`Step ${s.stepNumber}: ${s.title}`}
+                />
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Footer Controls: Step Dots + Prev / Next Actions */}
-        <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs">
-          <button
-            onClick={handlePrev}
-            disabled={currentStep === 0}
-            className="flex items-center gap-1 text-slate-400 hover:text-white px-2.5 py-1 rounded-lg disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Prev Feature</span>
-          </button>
+            {/* Back & Next Buttons */}
+            <div className="flex items-center gap-1.5">
+              {currentStep > 0 && (
+                <button
+                  onClick={handlePrev}
+                  className="px-2.5 py-1 rounded-xl border border-border text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+                >
+                  Back
+                </button>
+              )}
 
-          {/* Clickable Step Dots */}
-          <div className="flex items-center gap-2">
-            {tourSteps.map((s, idx) => (
               <button
-                key={idx}
-                onClick={() => goToStep(idx)}
-                className={`h-2 rounded-full transition-all ${
-                  currentStep === idx ? "w-8 bg-blue-500 shadow-md shadow-blue-500/50" : "w-2 bg-slate-700 hover:bg-slate-500"
-                }`}
-                title={`Jump to Step ${s.stepNumber}: ${s.title}`}
-              />
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-200 px-2 py-1 rounded-lg transition-colors text-[11px]"
-            >
-              Exit Tour
-            </button>
-            <button
-              onClick={handleNext}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow-md transition-all"
-            >
-              <span>{currentStep === tourSteps.length - 1 ? "Finish Tour" : "Next Feature"}</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
+                onClick={handleNext}
+                className="flex items-center gap-1 px-3.5 py-1 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-semibold shadow-md shadow-accent/25 transition-all cursor-pointer"
+              >
+                <span>{currentStep === tourSteps.length - 1 ? "Done" : "Next"}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

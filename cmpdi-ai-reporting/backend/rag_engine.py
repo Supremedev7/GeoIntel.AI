@@ -9,17 +9,22 @@ from ingester import engine
 from pathlib import Path
 import numpy as np
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("rag_engine")
+
 # Hybrid retrieval imports
 try:
-    from sentence_transformers import SentenceTransformer
     from rank_bm25 import BM25Okapi
     HYBRID_RETRIEVAL_AVAILABLE = True
 except ImportError:
     HYBRID_RETRIEVAL_AVAILABLE = False
-    logger.warning("Hybrid retrieval dependencies not available. Install sentence-transformers and rank-bm25 for enhanced retrieval.")
+    BM25Okapi = Any
+    logger.warning("rank-bm25 not installed. Operating with pure vector retrieval.")
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("rag_engine")
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    SentenceTransformer = Any
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
 if not GROQ_API_KEY:
@@ -40,13 +45,9 @@ if not GROQ_API_KEY:
             except Exception:
                 pass
 
-# Hybrid retrieval components
-if HYBRID_RETRIEVAL_AVAILABLE:
-    # Initialize sentence transformer model for dense embeddings
-    _DENSE_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
-    # Cache for BM25 index to avoid rebuilding on every query
-    _BM25_INDEX_CACHE = {}
-    _BM25_TOKEN_CACHE = {}
+# Hybrid retrieval caches
+_BM25_INDEX_CACHE = {}
+_BM25_TOKEN_CACHE = {}
 
 PREFERRED_MODELS = [
     "openai/gpt-oss-120b",
@@ -350,7 +351,8 @@ ENGLISH_SEMANTIC_STOPWORDS = {
 
 def _get_bm25_index(corpus: List[str]) -> BM25Okapi:
     """Get or create BM25 index for the corpus."""
-    corpus_key = hash(tuple(corpus))  # Simple hash of corpus for caching
+    import hashlib
+    corpus_key = hashlib.sha256("|".join(corpus).encode("utf-8")).hexdigest()
 
     if corpus_key not in _BM25_INDEX_CACHE:
         # Tokenize corpus for BM25
@@ -513,8 +515,9 @@ def extract_domain_entities_via_inference(sample_chunks: List[str], custom_api_k
     """
     corpus = engine.get_all_text_corpus()
     
-    # 1. Authoritative base candidates (all verified in CMPDI 100+ documents)
+    # 1. Authoritative base candidates (verified in CMPDI / Coal India corpus)
     verified_candidates = [
+        # Geological Formations & Stratigraphy
         {"text": "Barakar", "category": "geological_terms", "default_val": 96},
         {"text": "Raniganj", "category": "geological_terms", "default_val": 91},
         {"text": "Lower Gondwana", "category": "geological_terms", "default_val": 88},
@@ -523,6 +526,22 @@ def extract_domain_entities_via_inference(sample_chunks: List[str], custom_api_k
         {"text": "Karharbari", "category": "geological_terms", "default_val": 82},
         {"text": "Talcher", "category": "geological_terms", "default_val": 86},
         {"text": "Jharia", "category": "geological_terms", "default_val": 89},
+        {"text": "Bokaro", "category": "geological_terms", "default_val": 87},
+        {"text": "Singrauli", "category": "geological_terms", "default_val": 88},
+        {"text": "Korba", "category": "geological_terms", "default_val": 86},
+        {"text": "Karanpura", "category": "geological_terms", "default_val": 83},
+        {"text": "Stratigraphy", "category": "geological_terms", "default_val": 84},
+        {"text": "Sandstone", "category": "geological_terms", "default_val": 80},
+        {"text": "Shale", "category": "geological_terms", "default_val": 79},
+        {"text": "Lithology", "category": "geological_terms", "default_val": 78},
+        {"text": "Damodar Basin", "category": "geological_terms", "default_val": 85},
+        {"text": "Strata", "category": "geological_terms", "default_val": 77},
+        {"text": "Hydrology", "category": "geological_terms", "default_val": 75},
+        {"text": "Block", "category": "geological_terms", "default_val": 88},
+        {"text": "Seam", "category": "geological_terms", "default_val": 90},
+        {"text": "Sediment", "category": "geological_terms", "default_val": 76},
+
+        # Subsidiaries & Institutions
         {"text": "CMPDI", "category": "subsidiaries", "default_val": 98},
         {"text": "MCL", "category": "subsidiaries", "default_val": 94},
         {"text": "SECL", "category": "subsidiaries", "default_val": 93},
@@ -531,12 +550,31 @@ def extract_domain_entities_via_inference(sample_chunks: List[str], custom_api_k
         {"text": "WCL", "category": "subsidiaries", "default_val": 85},
         {"text": "BCCL", "category": "subsidiaries", "default_val": 88},
         {"text": "ECL", "category": "subsidiaries", "default_val": 92},
+        {"text": "CIL", "category": "subsidiaries", "default_val": 95},
+
+        # Mining Operations & Metrics
+        {"text": "Coal Production", "category": "mining_metrics", "default_val": 97},
         {"text": "Stripping Ratio", "category": "mining_metrics", "default_val": 95},
         {"text": "Overburden", "category": "mining_metrics", "default_val": 89},
-        {"text": "Coal Production", "category": "mining_metrics", "default_val": 97},
         {"text": "Opencast", "category": "mining_metrics", "default_val": 96},
         {"text": "Underground", "category": "mining_metrics", "default_val": 91},
         {"text": "Offtake", "category": "mining_metrics", "default_val": 84},
+        {"text": "HEMM", "category": "mining_metrics", "default_val": 85},
+        {"text": "Continuous Miner", "category": "mining_metrics", "default_val": 83},
+        {"text": "Dragline", "category": "mining_metrics", "default_val": 82},
+        {"text": "Dispatch", "category": "mining_metrics", "default_val": 88},
+        {"text": "Excavation", "category": "mining_metrics", "default_val": 80},
+        {"text": "Blasting", "category": "mining_metrics", "default_val": 79},
+        {"text": "Quarry", "category": "mining_metrics", "default_val": 78},
+        {"text": "Haul Road", "category": "mining_metrics", "default_val": 76},
+        {"text": "Reserve", "category": "mining_metrics", "default_val": 89},
+        {"text": "Stock", "category": "mining_metrics", "default_val": 78},
+        {"text": "Siding", "category": "mining_metrics", "default_val": 77},
+
+        # Domain Vocabulary, Equipment & Tech
+        {"text": "Mining", "category": "domain_vocabulary", "default_val": 95},
+        {"text": "Project", "category": "domain_vocabulary", "default_val": 90},
+        {"text": "Power", "category": "domain_vocabulary", "default_val": 86},
         {"text": "First Mile Connectivity", "category": "domain_vocabulary", "default_val": 93},
         {"text": "CBM", "category": "domain_vocabulary", "default_val": 90},
         {"text": "Washery", "category": "domain_vocabulary", "default_val": 86},
@@ -544,8 +582,33 @@ def extract_domain_entities_via_inference(sample_chunks: List[str], custom_api_k
         {"text": "Kusmunda", "category": "domain_vocabulary", "default_val": 87},
         {"text": "Shovel", "category": "domain_vocabulary", "default_val": 81},
         {"text": "Dumper", "category": "domain_vocabulary", "default_val": 80},
-        {"text": "HEMM", "category": "domain_vocabulary", "default_val": 79},
-        {"text": "Exploration", "category": "domain_vocabulary", "default_val": 92}
+        {"text": "Exploration", "category": "domain_vocabulary", "default_val": 92},
+        {"text": "Drilling", "category": "domain_vocabulary", "default_val": 90},
+        {"text": "Feasibility Study", "category": "domain_vocabulary", "default_val": 84},
+        {"text": "Geological Report", "category": "domain_vocabulary", "default_val": 89},
+        {"text": "Mine Plan", "category": "domain_vocabulary", "default_val": 86},
+        {"text": "DGMS", "category": "domain_vocabulary", "default_val": 84},
+        {"text": "Safety", "category": "domain_vocabulary", "default_val": 83},
+        {"text": "Afforestation", "category": "domain_vocabulary", "default_val": 78},
+        {"text": "Reclamation", "category": "domain_vocabulary", "default_val": 81},
+        {"text": "Beneficiation", "category": "domain_vocabulary", "default_val": 83},
+        {"text": "Coking Coal", "category": "domain_vocabulary", "default_val": 84},
+        {"text": "Non-Coking Coal", "category": "domain_vocabulary", "default_val": 85},
+        {"text": "Ash Content", "category": "domain_vocabulary", "default_val": 85},
+        {"text": "Moisture Content", "category": "domain_vocabulary", "default_val": 81},
+        {"text": "Calorific Value", "category": "domain_vocabulary", "default_val": 82},
+        {"text": "Slope Stability", "category": "domain_vocabulary", "default_val": 79},
+        {"text": "Crusher", "category": "domain_vocabulary", "default_val": 77},
+        {"text": "Reserve Estimation", "category": "domain_vocabulary", "default_val": 87},
+        {"text": "Clean Coal", "category": "domain_vocabulary", "default_val": 85},
+        {"text": "Environment", "category": "domain_vocabulary", "default_val": 84},
+        {"text": "Survey", "category": "domain_vocabulary", "default_val": 82},
+        {"text": "Handling", "category": "domain_vocabulary", "default_val": 78},
+        {"text": "Lignite", "category": "domain_vocabulary", "default_val": 88},
+        {"text": "DPR", "category": "domain_vocabulary", "default_val": 85},
+        {"text": "Infrastructure", "category": "domain_vocabulary", "default_val": 85},
+        {"text": "Monitoring", "category": "domain_vocabulary", "default_val": 82},
+        {"text": "Thermal", "category": "domain_vocabulary", "default_val": 80}
     ]
 
     # 2. Try LLM dynamic extraction if client available
