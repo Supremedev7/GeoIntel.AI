@@ -346,17 +346,19 @@ export default function App() {
         </div>
       )}
       {/* Modern Interactive Onboarding Tour */}
-      <OnboardingTour 
-        isOpen={isTourOpen} 
-        onClose={() => setIsTourOpen(false)} 
-        onNavigateTab={setActiveTab}
-        onSelectCitation={handleSelectCitation}
-        onAskAssistant={(query) => {
-          setChatInitialQuery(query);
-          setActiveTab('chat');
-        }}
-        availableFiles={availableFiles}
-      />
+      {isTourOpen && (
+        <OnboardingTour 
+          isOpen={isTourOpen} 
+          onClose={() => setIsTourOpen(false)} 
+          onNavigateTab={setActiveTab}
+          onSelectCitation={handleSelectCitation}
+          onAskAssistant={(query) => {
+            setChatInitialQuery(query);
+            setActiveTab('chat');
+          }}
+          availableFiles={availableFiles}
+        />
+      )}
     </div>
   );
 }

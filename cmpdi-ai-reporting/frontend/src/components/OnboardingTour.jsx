@@ -17,6 +17,13 @@ export default function OnboardingTour({
   const [targetRect, setTargetRect] = useState(null);
   const [popoverPos, setPopoverPos] = useState({ top: 100, left: 100 });
 
+  // Guarantee the tour always restarts from Step 1 whenever opened
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStep(0);
+    }
+  }, [isOpen]);
+
   const tourSteps = [
     {
       id: "kpis",
@@ -248,7 +255,7 @@ export default function OnboardingTour({
         handlePrev();
       } else if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        handleClose();
       }
     };
 
@@ -256,11 +263,16 @@ export default function OnboardingTour({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, currentStep]);
 
+  const handleClose = () => {
+    setCurrentStep(0);
+    if (onClose) onClose();
+  };
+
   const handleNext = () => {
     if (currentStep < tourSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      onClose();
+      handleClose();
     }
   };
 
@@ -347,7 +359,7 @@ export default function OnboardingTour({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1 rounded-lg hover:bg-surface-2 text-text-tertiary hover:text-text-primary transition-colors cursor-pointer shrink-0"
               title="Skip Tour"
             >
