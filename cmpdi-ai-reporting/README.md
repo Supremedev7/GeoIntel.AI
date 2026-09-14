@@ -1,101 +1,82 @@
-# GeoIntel Core : Autonomous Multimodal Geological Intelligence System
+# GeoIntel Core : Enterprise Spatial Document Intelligence & Autonomous Geological RAG Platform
 **Team Data Miners** | Smart India Hackathon 2026 | Problem Statement ID: **SIH26023**  
 *Ministry of Coal & Central Mine Planning & Design Institute (CMPDI) / Coal India Limited (CIL)*
 
----
-
-## ⛏️ About Team "Data Miners" & GeoIntel Core
-**Data Miners** represents a dual-concept coherence: harnessing advanced software data-mining algorithms to extract deep domain intelligence from complex coal-mining archives, borehole exploration logs, and Detailed Project Reports (DPRs).
-
-**GeoIntel Core** is an enterprise-grade, frontier-AI reporting and spatial audit platform powered by **Groq LPU Hardware Acceleration (Meta LLaMA 3.3 70B & Qwen 2.5 32B)**, **PyMuPDF Spatial Text-Coordinate Extraction**, and **ChromaDB High-Density Vector Embeddings**.
-
----
-
-## 📑 Official Smart India Hackathon 2026 Deliverables
-- **Official Presentation (PowerPoint):** [`SIH2026_GeoIntel_Core_Data_Miners.pptx`](./SIH2026_GeoIntel_Core_Data_Miners.pptx)  
-  *Strictly adheres to official guidelines: 6 slides, concise points, rich architecture diagrams, and real application screenshots.*
-- **Official Presentation (PDF):** [`SIH2026_GeoIntel_Core_Data_Miners.pdf`](./SIH2026_GeoIntel_Core_Data_Miners.pdf)  
-  *Print-ready 16:9 widescreen format required for portal submission.*
+[![Live Deployment](https://img.shields.io/badge/Render-Live%20Platform-00E599?style=for-the-badge&logo=render&logoColor=white)](https://geointel-ai-fg9a.onrender.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-Spatial%20Vectors-FF6F00?style=for-the-badge&logo=databricks&logoColor=white)](https://www.trychroma.com)
+[![Tests](https://img.shields.io/badge/Tests-81%2F81%20Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](./backend/tests)
 
 ---
 
-## 🏗️ 4-Stage Multimodal Architecture
+## ⛏️ Executive Summary
+
+**GeoIntel Core** is an enterprise-grade spatial document intelligence system engineered specifically to eliminate hallucination in high-stakes mining audits, geological stratigraphy correlation, and Detailed Project Report (DPR) analysis.
+
+By linking generative language statements to exact **2D Cartesian bounding boxes** ($[x_0, y_0, x_1, y_1]$) extracted directly from PDF pages via PyMuPDF, engineers and auditors can verify production claims, stratigraphy intervals, and stripping ratios with one-click physical grounding.
+
+![Figure 1: Analytics Dashboard](../docs/documentation_assets/fig_01_analytics_dashboard.png)
+*Figure 1: GeoIntel Core — Executive Analytics Dashboard & High-Density Mining Word Cloud with live aggregated national coal metrics.*
+
+---
+
+## 📑 Deliverables & Official Documentation
+
+- 📕 **Complete Technical Documentation & Visual Evidence Report (PDF):**  
+  [`GeoIntel_Core_Platform_Documentation.pdf`](./GeoIntel_Core_Platform_Documentation.pdf)  
+  *13-page publication PDF with 18 high-resolution visual evidence figures.*
+- 📊 **Official Presentation (PowerPoint):**  
+  [`../SIH2026_GeoIntel_Core_Data_Miners.pptx`](../SIH2026_GeoIntel_Core_Data_Miners.pptx)
+- 📄 **Official Presentation (PDF):**  
+  [`../SIH2026_GeoIntel_Core_Data_Miners.pdf`](../SIH2026_GeoIntel_Core_Data_Miners.pdf)
+
+---
+
+## 🏗️ System Architecture
 
 ```
-+---------------------------------------------------------------------------------------------------+
-|                                          GeoIntel Core                                            |
-|                  CMPDI & Coal India Geological Intelligence • Built by Team Data Miners            |
-+---------------------------------+---------------------------------+-------------------------------+
-| 1. INGESTION & EXTRACTION       | 2. INDEXING & KNOWLEDGE BASE   | 3. RESILIENT INFERENCE        |
-| • Ministry of Coal Archives     | • Sliding-Window Spatial Chunks | • Groq LPU Hardware Inference |
-| • Live Web Scraper & Ingester   | • All-MiniLM-L6-v2 Embeddings   | • Dynamic Token Budgeting     |
-| • PyMuPDF Bounding-Box Normaliz.| • ChromaDB Dense Vector Store   | • Spatial BBox Verification   |
-| • Instant Multipart PDF Upload  | • Domain Geological Lexicon     | • Zero-Downtime Local Fallback|
-+---------------------------------+---------------------------------+-------------------------------+
++----------------------------------------------------------------------------------------------------+
+|                                     GEOINTEL CORE ARCHITECTURE                                     |
++----------------------------------------------------------------------------------------------------+
+|  UI / UX LAYER (React 18 + Vite 5 + TailwindCSS)                                                   |
+|  - Tone-on-Tone Elevation: Dark Slate (#0E1217) & Light Slate (#EBEEF2)                           |
+|  - Layout Boundaries: Grid Track Isolation (CLS = 0.00)                                            |
+|  - 6-Step Onboarding State Machine (OnboardingTour.jsx)                                            |
++-------------------------------------------------+--------------------------------------------------+
                                                   |
                                                   v
-+---------------------------------------------------------------------------------------------------+
-| 4. PRESENTATION & MULTIMODAL SYNTHESIS (React 18 + Vite + FastAPI)                                |
-| • Split-Screen ChatGPT-Style Spatial PDF Audit (Dynamic Amber Bounding-Box Overlays)              |
-| • Geological Analytics Dashboard (Interactive Word Cloud with In-Place Occurrence Inspector)      |
-| • Autonomous Report Studio (Custom Directives driving Publication-Grade ReportLab PDF & DOCX)     |
-+---------------------------------------------------------------------------------------------------+
++-------------------------------------------------+--------------------------------------------------+
+|  SPATIAL VIEWER CANVAS                          |  REST API & ROUTING (FastAPI 0.115)              |
+|  - HTML5 Canvas Overlays                        |  - POST /query (Hybrid RAG + Citations)          |
+|  - PyMuPDF 72-DPI Bounding Box Mapping          |  - POST /upload (Coordinate Extraction)          |
+|  - Bounded Zoom Engine (65% to 150%)            |  - POST /reports/generate (.docx / .pdf)         |
++-------------------------------------------------+--------------------------------------------------+
+                                                  |
+                                                  v
++-------------------------------------------------+--------------------------------------------------+
+|  SPATIAL RETRIEVAL & VECTOR ENGINE              |  AUTONOMOUS REPORT STUDIO                        |
+|  - ChromaDB Persistent Store                    |  - ReportLab 5.0 Vector Engine                   |
+|  - 384-d Dense Embeddings (all-MiniLM-L6-v2)    |  - python-docx Multi-Level Tables                |
+|  - Hybrid Lexical BM25 + Dense Cosine Ranking   |  - Coal Ministry DPR Archetype Generators        |
++----------------------------------------------------------------------------------------------------+
 ```
-
----
-
-## 🚀 Key Functional Modules
-
-### 1. Split-Screen Spatial PDF Audit & Dynamic Citations
-- ChatGPT-style assistant querying 100+ multi-page geological documents.
-- Interactive citation pills (e.g. `P.1`, `P.48`) jump the embedded viewer directly to the target page and render **real-time amber bounding-box SVG overlays** at exact coordinates `[x0, y0, x1, y1]`.
-- Dynamic citation binding: Bounding boxes and snippet cards cleanly disappear when navigating to non-cited pages.
-
-### 2. Geological Analytics & Interactive Semantic Word Cloud
-- Domain-specific term extraction across Gondwana stratigraphy, CIL subsidiaries (MCL, SECL, NCL, CCL, WCL, BCCL, ECL), and mining operational metrics (OBR, GCV, stripping ratios).
-- **In-Place Occurrence Inspector**: Click any word cloud chip (e.g., *Barakar*, *Overburden*, *First Mile Connectivity*) to inspect its verified occurrences and source sentences across the entire corpus without leaving the dashboard.
-- Zero-citation filtering: Cleanly filters out noise so only verified domain entities appear.
-
-### 3. Autonomous Multi-Format Report Studio
-- Autonomous report generator allowing engineers to provide custom technical directives and notes (e.g., specific stripping ratio benchmarks, washery yield targets).
-- **Directives-Driven Synthesis**: User comments directly guide vector search retrieval, section hierarchy, and tabular data.
-- **In-Site Official PDF Preview**: Review the generated official PDF directly in the browser via an inline viewer before downloading.
-- Export to verified `.docx` (Word), `.pdf` (ReportLab print-ready), and `.md` (Markdown).
-
-### 4. Enterprise Document Repository & Live Ingestion Hub
-- Scaled for **100+ documents** and **2,000+ vector chunks**.
-- Drag & Drop zone supporting instant ingestion with automatic versioning (`_v2.pdf`) and real-time index count updates.
-- One-click "Audit in Viewer" jumps directly from any repository card into the Split-Screen RAG interface.
 
 ---
 
 ## ⚡ Quick Start & Run
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
+### 1-Click Cloud Deployment (Render.com)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Supremedev7/GeoIntel.AI)
 
-### Launching the Full System:
+### Local Development:
 ```bash
-# Clone the repository
-git clone https://github.com/Sankar7567/data_miners.git
-cd data_miners
-
-# Launch both Backend (FastAPI :8000) and Frontend (Vite :5173)
+# From repository root
 python3 run_demo.py
 ```
-
-### Access Points:
-- **Web User Interface:** [http://localhost:5173](http://localhost:5173)
-- **FastAPI REST API:** [http://localhost:8000](http://localhost:8000)
-- **Interactive OpenAPI / Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Web Interface:** [http://localhost:5173](http://localhost:5173)
+- **FastAPI API & Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-## 🛡️ Security & Compliance
-- **100% On-Premises Indexing:** Sensitive borehole reserves and mine plans remain within institutional boundaries.
-- **Auditable Provenance:** Every metric is grounded in official government and CMPDI documents.
-- **DGMS & Ministry Standards:** Conforms to statutory mining plan and environmental closure guidelines.
-
----
 **Team Data Miners** • *Smart India Hackathon 2026*
