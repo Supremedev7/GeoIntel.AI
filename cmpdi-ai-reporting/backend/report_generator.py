@@ -56,20 +56,29 @@ from subsidiary_data import SUBSIDIARY_DATA
 
 def sanitize_for_reportlab(text: str) -> str:
     """Safely escape text and convert standard markdown tags for ReportLab XML parser."""
-    # Replace problematic Unicode characters with ASCII equivalents
-    text = text.replace('‑', '-')  # Non-breaking hyphen
-    text = text.replace('‐', '-')  # Hyphen
-    text = text.replace('‒', '-')  # Figure dash
-    text = text.replace('–', '-')  # En dash
-    text = text.replace('—', '--') # Em dash
-    text = text.replace('―', '--') # Horizontal bar
-    text = text.replace('−', '-')  # Minus sign
-    text = text.replace('­', '')   # Soft hyphen (remove)
-    text = text.replace('​', '')   # Zero-width space (remove)
-    text = text.replace(' ', ' ')  # Non-breaking space
+    if not text:
+        return ""
+    # Currency symbols: Convert Indian Rupee glyph to clean ASCII text
+    text = str(text).replace('₹', 'Rs. ')
+
+    # Replace problematic Unicode dashes, minuses and spaces
+    text = text.replace('‑', '-').replace('‐', '-').replace('‒', '-').replace('–', '-').replace('—', '--').replace('―', '--').replace('−', '-')
+    text = text.replace('­', '').replace('​', '').replace(' ', ' ')
+
+    # Quotes, arrows and special symbols
+    text = text.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
+    text = text.replace('…', '...').replace('±', '+/-').replace('×', 'x')
+    text = text.replace('✔', '[OK]').replace('✓', '[OK]').replace('❌', '[X]').replace('✗', '[X]')
+    text = text.replace('▲', '^').replace('▼', 'v')
 
     # HTML escape
     text = html.escape(text)
+
+    # XML-compatible symbols & superscripts
+    text = text.replace('m³', 'm&sup3;').replace('m²', 'm&sup2;')
+    text = text.replace('³', '&sup3;').replace('²', '&sup2;')
+    text = text.replace('°', '&deg;')
+    text = text.replace('•', '&bull;')
 
     # Convert markdown to ReportLab XML
     text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
@@ -251,6 +260,7 @@ def _generate_section_content(section: Dict[str, str], chunks: List[Dict[str, An
         f"Focus: Provide detailed, factual analysis specific to {section['title']}.\n"
         f"Use bullet points for key findings and bold important technical terms.\n"
         f"Base your analysis strictly on the provided context. Do not invent facts.\n"
+        f"Currency & Formatting: Express Indian currency explicitly as 'Rs. <amount>' or '<amount> Crore INR' (NEVER use raw Unicode '₹').\n"
         f"Output in clean markdown format."
     )
 
@@ -450,6 +460,8 @@ def build_structured_report(config: Dict[str, Any]) -> Dict[str, Any]:
             "- Section 2 must synthesize technical facts, geological strata (e.g. Barakar, Raniganj), or borehole data matching the inquiry.\n"
             "- Section 3 must provide concrete operational action items and engineering directives.\n"
             "- Section 4 MUST include a clean Markdown data table (| Parameter | Baseline / Measured | Unit | Risk Level & Operational Control |) tailored to this request.\n"
+            "- Currency & Metric Formatting: NEVER use raw Unicode currency symbols such as '₹' in text or tables. Always format Indian currency explicitly as 'Rs. <amount>' or '<amount> Crore INR' (e.g. 'Rs. 20,000 cr', 'Rs. 16,000 cr/MT', or '1,800 Crore INR'). Use standard ASCII units ('MT', 'Lakh m', 'm3/t', 'MW', '%').\n"
+            "- Table Layout Discipline: Keep Parameter names clear and concise (e.g. 'Capital Expenditure', 'Syngas Subsidy Incentive') so table cells remain balanced.\n"
             "- MANDATORY: You MUST complete all 4 sections in order without leaving any section unfinished.\n"
             "- Keep sections focused and balanced (around 150-250 words per section) to guarantee full completion.\n"
             "- Use bolding for technical entities and bullet points for key takeaways.\n"
@@ -477,6 +489,7 @@ def build_structured_report(config: Dict[str, Any]) -> Dict[str, Any]:
             "Guidelines:\n"
             "- Substantively discuss the domain parameters from the official context.\n"
             "- Cite real figures, subsidiary metrics, geological strata, or mine parameters.\n"
+            "- Currency & Metric Formatting: NEVER use the Unicode Rupee symbol ('₹'); always express currency as 'Rs. <amount>' or '<amount> Crore INR'. Use standard ASCII units.\n"
             "- Use bullet points for key takeaways and bold technical terms.\n"
             "- Do not output preamble, pleasantries, or <think> tags. Start immediately with '## 1. Executive Summary & Directive Objectives'."
         )
@@ -758,8 +771,33 @@ def generate_pdf_from_markdown(md_text: str, output_path: Path, subsidiary: str,
             tbl_data.append(cells)
 
         try:
-            col_w = 532.0 / max_cols
-            t = Table(tbl_data, colWidths=[col_w] * max_cols)
+            # Proportional column width calculation based on maximum string length
+            col_lens = [0] * max_cols
+            for row in valid_rows:
+                for c_idx, cell in enumerate(row):
+                    if c_idx < max_cols:
+                        col_lens[c_idx] = max(col_lens[c_idx], len(str(cell)))
+
+            total_len = sum(col_lens) or 1
+            total_w = 532.0  # available printable width for letter size (612 - 80)
+            if max_cols == 1:
+                col_widths = [total_w]
+            elif max_cols == 4:
+                # Optimized standard 4-col schema: [Parameter, Baseline/Measured, Unit, Risk Level & Operational Control]
+                col_widths = [185.0, 95.0, 62.0, 190.0]
+            elif max_cols == 3:
+                # Optimized standard 3-col schema: [Parameter, Value, Unit]
+                col_widths = [240.0, 150.0, 142.0]
+            elif max_cols == 7:
+                # Standard 7-col CIL performance table: [Subsidiary, OC, UG, Total, Growth, Basin, Stripping Ratio]
+                col_widths = [75.0, 65.0, 65.0, 65.0, 52.0, 135.0, 75.0]
+            else:
+                # Dynamic proportional allocation with a minimum 50pt per column
+                raw_widths = [max(50.0, (l / total_len) * total_w) for l in col_lens]
+                s = sum(raw_widths)
+                col_widths = [(w / s) * total_w for w in raw_widths]
+
+            t = Table(tbl_data, colWidths=col_widths)
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0F2A4A')),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),

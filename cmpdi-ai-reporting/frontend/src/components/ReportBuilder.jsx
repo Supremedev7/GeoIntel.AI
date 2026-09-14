@@ -539,7 +539,7 @@ export default function ReportBuilder({ apiKey, availableFiles = [] }) {
                     </div>
                   </div>
                   <iframe
-                    src={`${reportResult.files.pdf.view_url || `/api/view-report-pdf/${reportResult.files.pdf.filename}`}#toolbar=0`}
+                    src={`${reportResult.files.pdf.view_url || `/api/view-report-pdf/${reportResult.files.pdf.filename}`}#toolbar=0&navpanes=0&view=FitH`}
                     className="w-full flex-1 min-h-[550px] border-0 bg-white"
                     title="Official PDF Viewer"
                   />

@@ -67,6 +67,32 @@
     inset: 0;
   }
 
+  html.landing-mode {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    position: static !important;
+    inset: auto !important;
+  }
+
+  html.landing-mode body {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+    position: static !important;
+    inset: auto !important;
+  }
+
+  html.landing-mode #root {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    position: static !important;
+    inset: auto !important;
+  }
+
   body {
     background-color: var(--surface-0);
     color: var(--text-primary);

@@ -8,9 +8,21 @@ import Dashboard from './components/Dashboard';
 import ReportBuilder from './components/ReportBuilder';
 import Repository from './components/Repository';
 import OnboardingTour from './components/OnboardingTour';
+import LandingPage from './components/LandingPage';
+import PlatformAmbientBackground from './components/PlatformAmbientBackground';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('chat');
+  const getInitialTab = () => {
+    try {
+      const hash = window.location.hash.replace('#', '');
+      if (['landing', 'dashboard', 'chat', 'reports', 'documents'].includes(hash)) {
+        return hash;
+      }
+    } catch (e) {}
+    return 'landing';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [availableFiles, setAvailableFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState('Coal_Ministry_Mine_Plan_Guidelines.pdf');
   const [activePage, setActivePage] = useState(1);
@@ -170,8 +182,48 @@ export default function App() {
     setKeyValidationStatus(null);
   };
 
+  useEffect(() => {
+    try {
+      if (activeTab === 'landing') {
+        const h = window.location.hash;
+        if (h && !['#top', '#challenge', '#platform', '#impact', '#roadmap', '#contact', '#landing'].includes(h)) {
+          window.history.replaceState(null, '', '#landing');
+        }
+      } else {
+        window.history.replaceState(null, '', `#${activeTab}`);
+      }
+    } catch (e) {}
+  }, [activeTab]);
+
+  // Dynamically toggle landing-mode class so LandingPage scrolls naturally while Platform Workspace remains 100% fixed
+  useEffect(() => {
+    if (activeTab === 'landing') {
+      document.documentElement.classList.add('landing-mode');
+      return () => {
+        document.documentElement.classList.remove('landing-mode');
+      };
+    } else {
+      document.documentElement.classList.remove('landing-mode');
+    }
+  }, [activeTab]);
+
+  if (activeTab === 'landing') {
+    return (
+      <div className="w-full min-h-full bg-[#0B0E12] text-[#F0F3F6] overflow-visible">
+        <LandingPage 
+          onLaunchPlatform={(targetTab) => {
+            setActiveTab(targetTab || 'dashboard');
+          }} 
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 h-full w-full overflow-hidden bg-[#EBEEF2] dark:bg-[#0E1217] text-text-primary selection:bg-accent/30 selection:text-white flex">
+    <div className="fixed inset-0 h-full w-full overflow-hidden bg-[#EBEEF2] dark:bg-[#0E1217] text-text-primary selection:bg-accent/30 selection:text-white flex relative">
+      {/* Ambient dust and floating geometry surrounding the sidebar space */}
+      <PlatformAmbientBackground isSidebarCollapsed={isSidebarCollapsed} />
+
       {/* Sidebar Navigation (Borderless & seamless with outer canvas) */}
       <Sidebar
         activeTab={activeTab}
