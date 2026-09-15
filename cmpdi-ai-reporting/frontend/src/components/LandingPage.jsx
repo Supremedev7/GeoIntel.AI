@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Layers, Sparkles, Database, BarChart3, Bot, FileText, ChevronRight } from 'lucide-react';
 import './LandingPage.css';
 
-export default function LandingPage({ onLaunchPlatform }) {
+export default function LandingPage({ onLaunchPlatform, onOpenArchitecture }) {
   const containerRef = useRef(null);
   const dustCanvasRef = useRef(null);
   const cursorRingRef = useRef(null);
@@ -42,10 +42,10 @@ export default function LandingPage({ onLaunchPlatform }) {
 
     /* 2. Nav Ticker */
     const tickerMsgs = [
-      "128,402 pages digitised",
-      "42 active seam records",
-      "Report queue: 3 pending",
-      "Archive coverage: 1962–2026"
+      "128,402 borehole & lithology folios indexed",
+      "42 active stratigraphic seam profiles",
+      "Dossier synthesis pipeline: 3 pending",
+      "Subsurface geological archive: 1962–2026"
     ];
     let tIdx = 0;
     const tickerEl = navTickerRef.current;
@@ -341,9 +341,9 @@ export default function LandingPage({ onLaunchPlatform }) {
     const termBody = termBodyRef.current;
     const termEl = terminalRef.current;
     const script = [
-      { type: 'term-query', text: 'geointel query: coal seam data — Q3, subsidiary WCL' },
-      { type: 'term-status', text: 'extracting official archive… 92%' },
-      { type: 'term-response', text: 'response: structured report assembled in 4.2s, 3 volumes cited' }
+      { type: 'term-query', text: 'geointel retrieve --stratigraphy: borehole lithology log & coal seam reserve — Block-IV, subsidiary WCL' },
+      { type: 'term-status', text: 'retrieving verified subsurface repository & stratigraphic cross-sections… 94%' },
+      { type: 'term-response', text: 'geological synthesis generated in 4.2s · 3 exploration volumes & 12 borehole logs verified' }
     ];
 
     let typeTimeout;
@@ -543,16 +543,16 @@ export default function LandingPage({ onLaunchPlatform }) {
         <div className="nav-mark">
           <span className="nav-mark-brand">GeoIntel Core</span>
           <span className="nav-mark-dim">/</span>
-          <span>CMPDI Platform</span>
+          <span>CMPDI Geological Platform</span>
         </div>
         <div className="nav-actions">
           <span className="nav-ticker mono" id="navTicker" ref={navTickerRef} aria-hidden="true"></span>
           <button 
             onClick={() => handleLaunch('dashboard')}
             className="nav-btn-app"
-            title="Launch GeoIntel Workspace"
+            title="Launch Geological Workspace"
           >
-            <span>Launch Platform</span>
+            <span>Launch Geo-Workspace</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -590,27 +590,32 @@ export default function LandingPage({ onLaunchPlatform }) {
           <div className="hero-content">
             <p className="eyebrow">GeoIntel Core · CMPDI / CIL · Ministry of Coal</p>
             <h1 className="hero-title">
-              Transforming geological<br />intelligence.
+              Advancing subsurface<br />geological intelligence.
             </h1>
             <p className="hero-sub">
-              GeoIntel Core is an enterprise AI platform for CMPDI and CIL subsidiaries — turning drill cores, scanned records, spreadsheets, and decades of archive into fast, verifiable reporting for the Ministry of Coal.
+              GeoIntel Core is an enterprise geological AI platform for CMPDI and CIL subsidiaries — transforming borehole lithology logs, drill core stratigraphy, geospatial shapefiles, and historical exploration records into rapid, verifiable geological synthesis for the Ministry of Coal.
             </p>
             <div className="hero-actions">
               <button 
                 onClick={() => handleLaunch('dashboard')} 
                 className="btn btn-solid cursor-pointer"
               >
-                <span>Open platform</span>
+                <span>Access Geological Platform</span>
                 <ArrowRight className="w-4 h-4 ml-1.5" />
               </button>
-              <a href="#roadmap" className="btn btn-outline">
-                View architecture
-              </a>
+              <button 
+                onClick={onOpenArchitecture || (() => window.location.hash = '#roadmap')} 
+                className="btn btn-outline cursor-pointer"
+                title="View Technical System Architecture"
+              >
+                <span>System Architecture</span>
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5 opacity-60" />
+              </button>
             </div>
           </div>
 
           <div className="hero-float-card">
-            <span className="hfc-label">Live extraction accuracy</span>
+            <span className="hfc-label">Subsurface Extraction Precision</span>
             <span className="hfc-value" id="hfcValue" ref={hfcValueRef}>
               99.2%
             </span>
@@ -630,74 +635,74 @@ export default function LandingPage({ onLaunchPlatform }) {
           </div>
         </section>
 
-        {/* 01 · THE CURRENT STATE */}
+        {/* 01 · THE SUBSURFACE INFORMATION BOTTLENECK */}
         <section className="section" id="challenge">
           <div className="section-head">
-            <p className="eyebrow">01 · The current state</p>
+            <p className="eyebrow">01 · Subsurface Information Bottleneck</p>
             <h2 className="reveal" data-anim="up">
-              Reports still run on tribal knowledge and manual assembly.
+              Exploration reporting remains bound to unindexed geological knowledge and manual assembly.
             </h2>
             <p className="section-lede reveal" data-anim="up" style={{ '--i': 1 }}>
-              Every parliamentary and high-priority inquiry pulls from scanned PDFs, spreadsheets, images, and historical archive — compiled by hand, subsidiary by subsidiary.
+              Statutory inquiries, resource evaluations, and parliamentary queries require manually extracting data from legacy borehole folios, scanned lithology sheets, and disparate regional archives across individual subsidiaries.
             </p>
           </div>
           <div className="challenge-grid">
             <article className="spec-card reveal" data-anim="clip" style={{ '--i': 0 }}>
               <span className="spec-mark" />
-              <h3>Manual expertise</h3>
-              <p>Every report leans on a handful of specialists who know where the data lives.</p>
-              <span className="spec-tag">High Dependency · ~4 Specialists / Subsidiary</span>
+              <h3>Siloed geological knowledge</h3>
+              <p>Critical exploration assessments depend on senior domain geologists possessing unindexed institutional memory of archive locations.</p>
+              <span className="spec-tag">Domain Dependency · Critical Senior Geologist Reliance</span>
             </article>
             <article className="spec-card reveal" data-anim="clip" style={{ '--i': 1 }}>
               <span className="spec-mark" />
-              <h3>Slow turnaround</h3>
-              <p>Compiling scanned records and archives into one report takes days, not hours.</p>
-              <span className="spec-tag">Latency · 3–5 Business Days Avg</span>
+              <h3>Prolonged retrieval latency</h3>
+              <p>Retrieving multi-borehole lithology logs and legacy core samples into unified dossiers consumes days of manual record tracing.</p>
+              <span className="spec-tag">Retrieval Latency · 3–5 Business Days per Dossier</span>
             </article>
             <article className="spec-card reveal" data-anim="clip" style={{ '--i': 2 }}>
               <span className="spec-mark" />
-              <h3>Manual error</h3>
-              <p>Hand-assembled figures carry a higher risk of mistakes reaching official answers.</p>
-              <span className="spec-tag">Risk · Discrepancy & Verification Overhead</span>
+              <h3>Stratigraphic transcription risk</h3>
+              <p>Manual transcription of borehole depths, seam thicknesses, and coal grades introduces discrepancies into statutory submissions.</p>
+              <span className="spec-tag">Audit Risk · Stratigraphic Variance & Verification Overhead</span>
             </article>
             <article className="spec-card reveal" data-anim="clip" style={{ '--i': 3 }}>
               <span className="spec-mark" />
-              <h3>Buried history</h3>
-              <p>Historical insight sits in archives that are slow to search and hard to cross-reference.</p>
-              <span className="spec-tag">Cold Archive · 128,400+ Unindexed Records</span>
+              <h3>Entombed geological archives</h3>
+              <p>Decades of high-value drill logs and mineralogical surveys remain entombed in legacy raster scans, inaccessible to spatial queries.</p>
+              <span className="spec-tag">Dormant Subsurface Data · 128,400+ Unindexed Records</span>
             </article>
           </div>
         </section>
 
-        {/* 02 · THE PLATFORM BENTO */}
+        {/* 02 · SUBSURFACE INTELLIGENCE SUITE */}
         <section className="section alt" id="platform">
           <div className="section-head">
-            <p className="eyebrow">02 · The platform</p>
+            <p className="eyebrow">02 · Subsurface Intelligence Suite</p>
             <h2 className="reveal" data-anim="up">
-              Three modules, one continuous pipeline.
+              Three integrated engines, one unified geological pipeline.
             </h2>
             <p className="section-lede reveal" data-anim="up" style={{ '--i': 1 }}>
-              Documents come in as scans, sheets, and images. Structured, traceable reports go out — without a specialist re-typing a single figure.
+              Borehole logs, geophysical surveys, and mine plan matrices ingest directly into multimodal AI. Verifiable, audit-ready exploration reports emerge with full source provenance.
             </p>
           </div>
           <div className="bento">
             <article className="bento-box bento-large reveal" data-anim="scale">
               <div className="flex items-center justify-between mb-1">
-                <h3>Automated report generation</h3>
+                <h3>Automated Geological Report &amp; Dossier Synthesis</h3>
                 <button 
                   onClick={() => handleLaunch('reports')} 
                   className="text-xs text-[#E5A84B] font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Open Builder</span>
+                  <span>Launch Dossier Builder</span>
                   <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
               <p>
-                Scanned documents, spreadsheets, and images are parsed, validated, and assembled into structured reports automatically.
+                Borehole lithology strata, proximate analysis tables, and reserve estimations are parsed, validated against statutory norms, and assembled into structured dossiers automatically.
               </p>
               <div className="mock-report" id="mockReport" ref={mockReportRef}>
                 <div className="mock-doc" aria-hidden="true">
-                  <span className="mock-doc-title">GEOINTEL_SURVEY_WCL_Q3.pdf</span>
+                  <span className="mock-doc-title">CMPDI_BOREHOLE_STRATIGRAPHY_WCL_BLOCK_IV.pdf</span>
                   <div className="doc-line" style={{ width: '88%' }} />
                   <div className="doc-line" style={{ width: '64%' }} />
                   <div className="doc-line" style={{ width: '79%' }} />
@@ -711,32 +716,32 @@ export default function LandingPage({ onLaunchPlatform }) {
                 </svg>
                 <div className="mock-table" aria-hidden="true">
                   <div className="mock-row head">
-                    <span>Seam ID</span>
+                    <span>Stratigraphic Seam</span>
                     <span>Thickness</span>
-                    <span>Reserve</span>
-                    <span>Status</span>
+                    <span>Proved Reserve</span>
+                    <span>Validation</span>
                   </div>
                   <div className="mock-row">
-                    <span>S-14A</span>
-                    <span>3.8 m</span>
+                    <span>Seam-XIV (Bottom)</span>
+                    <span>3.82 m</span>
                     <span>42.6 Mt</span>
                     <span className="status-ok">Verified</span>
                   </div>
                   <div className="mock-row">
-                    <span>S-09C</span>
-                    <span>2.1 m</span>
+                    <span>Seam-IX (Middle)</span>
+                    <span>2.15 m</span>
                     <span>18.9 Mt</span>
                     <span className="status-ok">Verified</span>
                   </div>
                   <div className="mock-row">
-                    <span>S-22B</span>
-                    <span>4.4 m</span>
+                    <span>Seam-XXII (Top)</span>
+                    <span>4.40 m</span>
                     <span>55.2 Mt</span>
-                    <span className="status-review">Review</span>
+                    <span className="status-review">Strata Review</span>
                   </div>
                   <div className="mock-row">
-                    <span>S-07A</span>
-                    <span>1.9 m</span>
+                    <span>Seam-VII (Basal)</span>
+                    <span>1.90 m</span>
                     <span>11.4 Mt</span>
                     <span className="status-ok">Verified</span>
                   </div>
@@ -746,40 +751,40 @@ export default function LandingPage({ onLaunchPlatform }) {
 
             <article className="bento-box reveal" data-anim="scale" style={{ '--i': 1 }}>
               <div className="flex items-center justify-between mb-1">
-                <h3>Word cloud &amp; topic identification</h3>
+                <h3>Stratigraphic taxonomy &amp; thematic extraction</h3>
                 <button 
                   onClick={() => handleLaunch('documents')} 
                   className="text-xs text-[#E5A84B] font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
-                  <span>View Archive</span>
+                  <span>Explore Geological Archive</span>
                   <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
-              <p>Every incoming document is scanned for recurring terms and emerging themes.</p>
+              <p>Incoming exploration folios are autonomously indexed for geological entities, lithological horizons, and chemical gradings.</p>
               <div className="word-cloud" id="wordCloud" ref={wordCloudRef} aria-hidden="true">
-                <span className="wc-term wc-lg" style={{ '--o': 0.95 }}>Seam thickness</span>
-                <span className="wc-term wc-sm" style={{ '--o': 0.55 }}>Q3 report</span>
-                <span className="wc-term wc-md" style={{ '--o': 0.8 }}>Reserve estimate</span>
-                <span className="wc-term wc-sm" style={{ '--o': 0.5 }}>Subsidiary WCL</span>
-                <span className="wc-term wc-lg" style={{ '--o': 0.9 }}>Overburden ratio</span>
-                <span className="wc-term wc-md" style={{ '--o': 0.75 }}>Historical archive</span>
-                <span className="wc-term wc-sm" style={{ '--o': 0.5 }}>Extraction rate</span>
-                <span className="wc-term wc-md" style={{ '--o': 0.7 }}>Production yield</span>
+                <span className="wc-term wc-lg" style={{ '--o': 0.95 }}>Stratigraphic correlation</span>
+                <span className="wc-term wc-sm" style={{ '--o': 0.55 }}>Borehole lithology</span>
+                <span className="wc-term wc-md" style={{ '--o': 0.8 }}>UNFC Proved Reserves</span>
+                <span className="wc-term wc-sm" style={{ '--o': 0.5 }}>Block-IV Strata</span>
+                <span className="wc-term wc-lg" style={{ '--o': 0.9 }}>Overburden ratio (OBR)</span>
+                <span className="wc-term wc-md" style={{ '--o': 0.75 }}>Proximate ash analysis</span>
+                <span className="wc-term wc-sm" style={{ '--o': 0.5 }}>Gross calorific value</span>
+                <span className="wc-term wc-md" style={{ '--o': 0.7 }}>Geophysical well log</span>
               </div>
             </article>
 
             <article className="bento-box reveal" data-anim="scale" style={{ '--i': 2 }}>
               <div className="flex items-center justify-between mb-1">
-                <h3>AI query &amp; response</h3>
+                <h3>Semantic vector retrieval &amp; subsurface synthesis</h3>
                 <button 
                   onClick={() => handleLaunch('chat')} 
                   className="text-xs text-[#E5A84B] font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Try Query</span>
+                  <span>Launch Retrieval</span>
                   <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
-              <p>Ask a question in plain language; get an answer sourced from the full historical archive.</p>
+              <p>Formulate natural language exploration queries to perform neural vector retrieval across decades of subsurface drill logs, seam analyses, and verified regional dossiers.</p>
               <div className="terminal" id="terminal" ref={terminalRef}>
                 <div className="term-bar" aria-hidden="true">
                   <span /><span /><span />
@@ -793,30 +798,30 @@ export default function LandingPage({ onLaunchPlatform }) {
         {/* 03 · THE IMPACT */}
         <section className="section" id="impact">
           <div className="section-head">
-            <p className="eyebrow">03 · The impact</p>
+            <p className="eyebrow">03 · Operational &amp; Exploration Impact</p>
             <h2 className="reveal" data-anim="up">
-              What automation is worth, in numbers.
+              Quantifiable operational value in mining intelligence.
             </h2>
             <p className="impact-note reveal" data-anim="up" style={{ '--i': 1 }}>
-              Targets set during requirement analysis, to be validated through the phased rollout below.
+              Target benchmarks established through geological requirement matrices and verified CMPDI field pilots.
             </p>
           </div>
           <div className="stat-row" ref={statRowRef}>
             <div className="stat reveal" data-anim="fade">
               <span className="stat-value" data-target="85" data-suffix="%">0%</span>
-              <span className="stat-label">Less time spent preparing each report</span>
+              <span className="stat-label">Reduction in geological dossier compilation time</span>
             </div>
             <div className="stat reveal" data-anim="fade" style={{ '--i': 1 }}>
               <span className="stat-value" data-target="99" data-suffix="%">0%</span>
-              <span className="stat-label">Accuracy in structured data extraction</span>
+              <span className="stat-label">Precision in tabular lithology and reserve extraction</span>
             </div>
             <div className="stat reveal" data-anim="fade" style={{ '--i': 2 }}>
               <span className="stat-value" data-target="90" data-suffix="%">0%</span>
-              <span className="stat-label">Of repetitive reporting workflows automated</span>
+              <span className="stat-label">Of routine statutory and ministerial reporting automated</span>
             </div>
             <div className="stat reveal" data-anim="fade" style={{ '--i': 3 }}>
               <span className="stat-value" data-target="100" data-suffix="%">0%</span>
-              <span className="stat-label">Of figures traceable back to source</span>
+              <span className="stat-label">Traceability with direct citations to original borehole scans</span>
             </div>
           </div>
         </section>
@@ -824,12 +829,12 @@ export default function LandingPage({ onLaunchPlatform }) {
         {/* 04 · THE PATH / ROADMAP */}
         <section className="section alt" id="roadmap">
           <div className="section-head">
-            <p className="eyebrow">04 · The path</p>
+            <p className="eyebrow">04 · Deployment Roadmap</p>
             <h2 className="reveal" data-anim="up">
-              A phased rollout, not a big-bang launch.
+              Structured operational deployment across exploration divisions.
             </h2>
             <p className="section-lede reveal" data-anim="up" style={{ '--i': 1 }}>
-              Each phase is validated against real historical reports before the next one begins.
+              Each implementation phase is validated against statutory geological documentation and CIL subsidiary standards.
             </p>
           </div>
           <div className="timeline">
@@ -840,38 +845,38 @@ export default function LandingPage({ onLaunchPlatform }) {
               <li className="timeline-item reveal" data-anim="up" style={{ '--i': 0 }}>
                 <span className="ti-node" />
                 <span className="ti-num">Phase 1</span>
-                <h3>Requirement analysis</h3>
-                <p>Map the exact reports, inquiries, and data sources each subsidiary depends on.</p>
+                <h3>Stratigraphic schema &amp; requirement mapping</h3>
+                <p>Codify statutory reporting formats, borehole data schemas, and multi-subsidiary exploration workflows.</p>
               </li>
               <li className="timeline-item reveal" data-anim="up" style={{ '--i': 1 }}>
                 <span className="ti-node" />
                 <span className="ti-num">Phase 2</span>
-                <h3>Data digitisation &amp; pre-processing</h3>
-                <p>Convert scanned archives and spreadsheets into structured, searchable records.</p>
+                <h3>Geological data digitisation &amp; vector indexing</h3>
+                <p>Convert legacy drill core logs, raster seam folios, and chemical assay sheets into high-dimensional vector embeddings.</p>
               </li>
               <li className="timeline-item reveal" data-anim="up" style={{ '--i': 2 }}>
                 <span className="ti-node" />
                 <span className="ti-num">Phase 3</span>
-                <h3>Platform development</h3>
-                <p>Build the report generation, topic identification, and query modules.</p>
+                <h3>Geological AI engine deployment</h3>
+                <p>Deploy the automated dossier synthesis engine, stratigraphic semantic tagger, and neural retrieval pipelines.</p>
               </li>
               <li className="timeline-item reveal" data-anim="up" style={{ '--i': 3 }}>
                 <span className="ti-node" />
                 <span className="ti-num">Phase 4</span>
-                <h3>System testing</h3>
-                <p>Validate outputs against real historical reports before anything goes live.</p>
+                <h3>Ground-truth benchmarking &amp; verification</h3>
+                <p>Validate synthesized reserve calculations and seam correlations against verified historical CMPDI exploration records.</p>
               </li>
               <li className="timeline-item reveal" data-anim="up" style={{ '--i': 4 }}>
                 <span className="ti-node" />
                 <span className="ti-num">Phase 5</span>
-                <h3>CIL subsidiary integration</h3>
-                <p>Connect the platform into each subsidiary's existing reporting workflow.</p>
+                <h3>CIL subsidiary &amp; field command integration</h3>
+                <p>Connect the platform into operational reporting workflows across ECL, BCCL, CCL, WCL, SECL, NCL, and MCL.</p>
               </li>
               <li className="timeline-item reveal" data-anim="up" style={{ '--i': 5 }}>
                 <span className="ti-node" />
                 <span className="ti-num">Phase 6</span>
-                <h3>Training &amp; continuous enhancement</h3>
-                <p>Train report teams and keep refining the models as new data arrives.</p>
+                <h3>Domain fine-tuning &amp; continuous learning</h3>
+                <p>Empower exploration geologists with retrieval tools while continuously adapting domain models on fresh drill campaigns.</p>
               </li>
             </ol>
           </div>
@@ -881,32 +886,37 @@ export default function LandingPage({ onLaunchPlatform }) {
       {/* FOOTER */}
       <footer className="footer" id="contact">
         <h2 className="footer-cta reveal" data-anim="up">
-          Modernise the mining ecosystem with GeoIntel.
+          Empower geological discovery with GeoIntel Core.
         </h2>
         <p className="footer-sub reveal" data-anim="up" style={{ '--i': 1 }}>
-          A shared, traceable reporting layer by GeoIntel Core for CMPDI and every CIL subsidiary — built to support governance, policy planning, and operational decisions with the Ministry of Coal.
+          A unified, verifiable geological knowledge platform for CMPDI and all Coal India subsidiaries — accelerating resource planning, statutory compliance, and data-driven mineral governance for the Ministry of Coal.
         </p>
         <div className="footer-actions">
           <button 
             onClick={() => handleLaunch('dashboard')}
             className="btn btn-solid cursor-pointer"
           >
-            <span>Open platform</span>
+            <span>Access Platform</span>
             <ArrowRight className="w-4 h-4 ml-1.5" />
           </button>
         </div>
         <nav className="footer-links">
-          <a href="#top">Overview</a>
-          <a href="#roadmap">Architecture</a>
+          <a href="#top">Platform Overview</a>
+          <button 
+            onClick={onOpenArchitecture}
+            className="footer-nav-btn cursor-pointer"
+          >
+            System Architecture
+          </button>
           <button 
             onClick={() => handleLaunch('chat')} 
             className="footer-nav-btn"
           >
-            Launch AI Chat
+            Geological Retrieval Assistant
           </button>
         </nav>
         <p className="footer-fine">
-          GeoIntel Core · Geological Intelligence Platform for CMPDI / CIL subsidiaries · Ministry of Coal
+          GeoIntel Core · Subsurface Geological Intelligence Platform for CMPDI / CIL subsidiaries · Ministry of Coal
         </p>
       </footer>
     </div>

@@ -2,7 +2,7 @@ import React from "react";
 import { 
   Bot, BarChart3, FileCheck, FolderArchive, Key, 
   Sun, Moon, Globe, Compass, PanelLeftClose, PanelLeftOpen,
-  Layers
+  Layers, Workflow
 } from "lucide-react";
 import { useAppContext } from "../contexts/AppContext";
 
@@ -32,6 +32,12 @@ export default function Sidebar({
       title: "DATA & REPOSITORY",
       items: [
         { id: "documents", label: t('sidebar.archive'), icon: FolderArchive, badge: `${documentCount}` },
+      ]
+    },
+    {
+      title: "SYSTEM",
+      items: [
+        { id: "architecture", label: t('sidebar.architecture') || "Architecture", icon: Workflow, badge: "v3.1" },
       ]
     }
   ];

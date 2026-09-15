@@ -246,6 +246,29 @@
   box-shadow: 0 4px 14px rgba(58, 127, 168, 0.3);
 }
 
+.cmpdi-landing .nav-btn-link {
+  padding: .48rem .95rem;
+  font-size: .82rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-dim);
+  font-weight: 500;
+  transition: all .25s ease;
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cmpdi-landing .nav-btn-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--line-strong);
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+
 /* ---------- BUTTONS ---------- */
 .cmpdi-landing .btn {
   display: inline-flex;
@@ -767,7 +790,7 @@
 
 .cmpdi-landing .mock-row {
   display: grid;
-  grid-template-columns: 1.1fr .9fr .9fr .9fr;
+  grid-template-columns: 1.4fr .8fr 1.1fr .9fr;
   gap: .4rem;
   padding: .45rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);

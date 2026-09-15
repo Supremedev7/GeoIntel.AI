@@ -7,6 +7,7 @@ export const translations = {
       analytics: "Analytics",
       reports: "Reports",
       archive: "Archive",
+      architecture: "Architecture",
       api_key: "API Key",
     },
     theme: {

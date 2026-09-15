@@ -70,9 +70,12 @@ export default function Repository({
     }
   };
 
+  const SUPPORTED_EXTS = ['.pdf', '.xlsx', '.xls', '.csv', '.tsv', '.docx', '.png', '.jpg', '.jpeg', '.tiff', '.tif', '.bmp'];
+
   const uploadFile = async (file) => {
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setUploadError("Only standard .pdf geological/mining documents are accepted.");
+    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+    if (!SUPPORTED_EXTS.includes(fileExt)) {
+      setUploadError(`Unsupported file format "${fileExt}". Supported: PDF, XLSX, CSV, TSV, DOCX, and Geological Images.`);
       return;
     }
 
@@ -84,17 +87,18 @@ export default function Repository({
     formData.append('file', file);
 
     try {
-      const resp = await fetch('/api/upload-pdf', {
+      const resp = await fetch('/api/upload-document', {
         method: 'POST',
         body: formData,
       });
 
       if (!resp.ok) {
-        throw new Error(`Upload failed with status ${resp.status}`);
+        const errorData = await resp.json().catch(() => null);
+        throw new Error(errorData?.detail || `Upload failed with status ${resp.status}`);
       }
 
       const res = await resp.json();
-      setUploadSuccess(`Successfully ingested "${res.filename}" (${res.pages} pages, ${res.chunks_indexed} spatial vectors indexed) • Library updated to ${res.total_documents} documents (${res.total_vectors} vectors)`);
+      setUploadSuccess(`Successfully ingested "${res.filename}" (${res.format || 'Document'}, ${res.chunks_indexed} spatial vectors indexed) • Library updated to ${res.total_documents} documents (${res.total_vectors} vectors)`);
       if (onRefresh) await onRefresh();
     } catch (err) {
       setUploadError(err.message);
@@ -184,7 +188,7 @@ export default function Repository({
         <input
           type="file"
           id="pdfUploadInput"
-          accept=".pdf"
+          accept=".pdf,.xlsx,.xls,.csv,.tsv,.docx,.png,.jpg,.jpeg,.tiff,.tif,.bmp"
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
               uploadFile(e.target.files[0]);
@@ -205,10 +209,10 @@ export default function Repository({
 
           <div>
             <h3 className="text-sm font-bold text-text-primary">
-              {uploading ? 'Parsing PDF & Building Spatial Vectors...' : 'Drag & Drop Manual PDF Documents Here'}
+              {uploading ? 'Parsing Exploration Document & Indexing Vectors...' : 'Drag & Drop Exploration Documents, Spreadsheets & Maps Here'}
             </h3>
             <p className="text-xs text-text-tertiary mt-0.5">
-              Supports CIL annual reports, mine plans, EIA studies, and DGMS circulars.
+              Supports Geological PDFs, Mining Spreadsheets (CSV/XLSX), Borehole Folios, DOCX &amp; Stratigraphic Maps.
             </p>
           </div>
 
@@ -239,9 +243,9 @@ export default function Repository({
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-text-tertiary px-1">
           <span className="font-bold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-accent" /> Ingested PDF Library ({availableFiles.length})
+            <FolderArchive className="w-4 h-4 text-accent" /> Ingested Exploration Library ({availableFiles.length})
           </span>
-          <span>Click "Audit in PDF Viewer" to inspect spatial text coordinates</span>
+          <span>PDFs, Spreadsheets (CSV/XLSX), Borehole Folios &amp; Reports</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -252,6 +256,10 @@ export default function Repository({
             const chunks = typeof doc === 'object' && doc !== null ? (doc?.chunks || 0) : 0;
             const upload_date = typeof doc === 'object' && doc !== null ? (doc?.upload_date || 'Ready') : 'Ready';
             const url = typeof doc === 'object' && doc !== null ? (doc?.url || `/api/pdf-raw/${fname}`) : `/api/pdf-raw/${fname}`;
+            const isSheet = fname.toLowerCase().endsWith('.csv') || fname.toLowerCase().endsWith('.xlsx') || fname.toLowerCase().endsWith('.tsv') || fname.toLowerCase().endsWith('.xls');
+            const isImg = fname.toLowerCase().endsWith('.png') || fname.toLowerCase().endsWith('.jpg') || fname.toLowerCase().endsWith('.jpeg') || fname.toLowerCase().endsWith('.tiff') || fname.toLowerCase().endsWith('.tif') || fname.toLowerCase().endsWith('.bmp');
+            const formatTag = doc?.format || (isSheet ? 'SHEET' : isImg ? 'IMAGE' : 'PDF');
+
             return (
               <div
                 key={fname || idx}
@@ -260,11 +268,22 @@ export default function Repository({
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between">
                     <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
-                      <FileText className="w-5 h-5" />
+                      {isSheet ? (
+                        <FileSpreadsheet className="w-5 h-5 text-accent" />
+                      ) : isImg ? (
+                        <Layers className="w-5 h-5 text-accent" />
+                      ) : (
+                        <FileText className="w-5 h-5 text-accent" />
+                      )}
                     </div>
-                    <span className="text-[10px] bg-status-success/15 text-status-success font-semibold px-2.5 py-0.5 rounded-full border border-status-success/30 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Indexed
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] bg-surface-2 text-text-secondary font-mono px-2 py-0.5 rounded border border-border">
+                        {formatTag}
+                      </span>
+                      <span className="text-[10px] bg-status-success/15 text-status-success font-semibold px-2 py-0.5 rounded-full border border-status-success/30 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Indexed
+                      </span>
+                    </div>
                   </div>
 
                   <div>
@@ -272,8 +291,12 @@ export default function Repository({
                       {fname}
                     </h3>
                     <div className="flex items-center gap-2 text-[11px] text-text-tertiary mt-1">
-                      <span className="text-accent font-semibold">{pages} Pages</span>
-                      <span>&bull;</span>
+                      {!isSheet && !isImg && (
+                        <>
+                          <span className="text-accent font-semibold">{pages} Pages</span>
+                          <span>&bull;</span>
+                        </>
+                      )}
                       <span>{size_kb > 1024 ? `${(size_kb/1024).toFixed(1)} MB` : `${size_kb} KB`}</span>
                       <span>&bull;</span>
                       <span className="text-status-success font-medium">{chunks} vectors</span>
@@ -286,21 +309,29 @@ export default function Repository({
                 </div>
 
                 <div className="flex items-center gap-2 pt-3 border-t border-border">
-                  <button
-                    onClick={() => onSelectForAudit && onSelectForAudit(fname)}
-                    className="flex-1 bg-surface-2 hover:bg-surface-3 border border-border text-text-primary text-xs py-1.5 rounded-lg font-medium transition-colors text-center flex items-center justify-center gap-1"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-accent" />
-                    <span>Audit in Viewer</span>
-                  </button>
-                  <a
-                    href={url}
-                    download
-                    className="p-1.5 bg-surface-2 hover:bg-surface-3 text-text-secondary rounded-lg transition-colors border border-border"
-                    title="Download Raw PDF"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </a>
+                  {!isSheet && !isImg ? (
+                    <button
+                      onClick={() => onSelectForAudit && onSelectForAudit(fname)}
+                      className="flex-1 bg-surface-2 hover:bg-surface-3 border border-border text-text-primary text-xs py-1.5 rounded-lg font-medium transition-colors text-center flex items-center justify-center gap-1"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-accent" />
+                      <span>Audit in Viewer</span>
+                    </button>
+                  ) : (
+                    <div className="flex-1 text-center py-1.5 text-[11px] text-zinc-400 font-mono bg-surface-2/60 rounded-lg border border-border">
+                      {isSheet ? 'Tabular Semantic Index' : 'Spatial OCR Vectorized'}
+                    </div>
+                  )}
+                  {url && (
+                    <a
+                      href={url}
+                      download
+                      className="p-1.5 bg-surface-2 hover:bg-surface-3 text-text-secondary rounded-lg transition-colors border border-border"
+                      title="Download Source Document"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+                  )}
                 </div>
               </div>
             );

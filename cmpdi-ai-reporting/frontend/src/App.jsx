@@ -9,13 +9,14 @@ import ReportBuilder from './components/ReportBuilder';
 import Repository from './components/Repository';
 import OnboardingTour from './components/OnboardingTour';
 import LandingPage from './components/LandingPage';
+import ArchitecturePage from './components/ArchitecturePage';
 import PlatformAmbientBackground from './components/PlatformAmbientBackground';
 
 export default function App() {
   const getInitialTab = () => {
     try {
       const hash = window.location.hash.replace('#', '');
-      if (['landing', 'dashboard', 'chat', 'reports', 'documents'].includes(hash)) {
+      if (['landing', 'dashboard', 'chat', 'reports', 'documents', 'architecture'].includes(hash)) {
         return hash;
       }
     } catch (e) {}
@@ -195,9 +196,9 @@ export default function App() {
     } catch (e) {}
   }, [activeTab]);
 
-  // Dynamically toggle landing-mode class so LandingPage scrolls naturally while Platform Workspace remains 100% fixed
+  // Dynamically toggle landing-mode class so LandingPage and ArchitecturePage scroll naturally while Platform Workspace remains 100% fixed
   useEffect(() => {
-    if (activeTab === 'landing') {
+    if (activeTab === 'landing' || activeTab === 'architecture') {
       document.documentElement.classList.add('landing-mode');
       return () => {
         document.documentElement.classList.remove('landing-mode');
@@ -214,6 +215,20 @@ export default function App() {
           onLaunchPlatform={(targetTab) => {
             setActiveTab(targetTab || 'dashboard');
           }} 
+          onOpenArchitecture={() => setActiveTab('architecture')}
+        />
+      </div>
+    );
+  }
+
+  if (activeTab === 'architecture') {
+    return (
+      <div className="w-full min-h-full bg-[#0B0E12] text-[#F0F3F6] overflow-visible">
+        <ArchitecturePage 
+          onBackToLanding={() => setActiveTab('landing')}
+          onLaunchPlatform={(targetTab) => {
+            setActiveTab(targetTab || 'dashboard');
+          }}
         />
       </div>
     );

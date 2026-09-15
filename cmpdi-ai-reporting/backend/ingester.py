@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+import io
 import fitz  # PyMuPDF
 import numpy as np
 import chromadb
@@ -19,6 +20,13 @@ try:
     SPREADSHEET_AVAILABLE = True
 except ImportError:
     SPREADSHEET_AVAILABLE = False
+
+# Word document processing
+try:
+    import docx
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
 
 # OCR for scanned PDFs and images (SIH26023: "images" and "scanned PDFs")
 try:
@@ -39,7 +47,7 @@ PDF_DIR.mkdir(parents=True, exist_ok=True)
 CHROMA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Supported file extensions for multi-format ingestion
-SUPPORTED_EXTENSIONS = {".pdf", ".xlsx", ".csv", ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp"}
+SUPPORTED_EXTENSIONS = {".pdf", ".xlsx", ".xls", ".csv", ".tsv", ".docx", ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp"}
 
 class FastOfflineEmbedding(EmbeddingFunction):
     """
@@ -261,25 +269,60 @@ class IngestionEngine:
                         })
                 wb.close()
 
-            elif ext == ".csv":
-                with open(filepath, "r", encoding="utf-8", errors="replace") as f:
-                    reader = csv.reader(f)
-                    rows = list(reader)
+            elif ext in {".csv", ".tsv"}:
+                raw_bytes = filepath.read_bytes()
+                content = None
+                for enc in ["utf-8-sig", "utf-8", "cp1252", "latin-1"]:
+                    try:
+                        content = raw_bytes.decode(enc)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                if content is None:
+                    content = raw_bytes.decode("utf-8", errors="replace")
+
+                lines = [line for line in content.splitlines() if line.strip()]
+                if not lines:
+                    return records
+
+                # Determine delimiter
+                delimiter = "\t" if ext == ".tsv" else ","
+                if ext != ".tsv":
+                    sample = "\n".join(lines[:15])
+                    try:
+                        dialect = csv.Sniffer().sniff(sample, delimiters=[',', '\t', ';', '|'])
+                        delimiter = dialect.delimiter
+                    except Exception:
+                        first_line = lines[0]
+                        counts = {',': first_line.count(','), '\t': first_line.count('\t'), ';': first_line.count(';'), '|': first_line.count('|')}
+                        best_delim = max(counts, key=counts.get)
+                        if counts[best_delim] > 0:
+                            delimiter = best_delim
+
+                reader = csv.reader(io.StringIO(content), delimiter=delimiter)
+                rows = [r for r in reader if any(cell.strip() for cell in r)]
 
                 if not rows:
                     return records
 
-                headers = [str(h).strip() if h else f"Col_{i}" for i, h in enumerate(rows[0])]
+                if len(rows) == 1:
+                    headers = [f"Col_{i+1}" for i in range(len(rows[0]))]
+                    data_rows = rows
+                    start_idx = 1
+                else:
+                    headers = [str(h).strip() if str(h).strip() else f"Col_{i+1}" for i, h in enumerate(rows[0])]
+                    data_rows = rows[1:]
+                    start_idx = 2
 
-                for row_idx, row in enumerate(rows[1:], start=2):
+                for row_idx, row in enumerate(data_rows, start=start_idx):
                     cells = [str(c).strip() for c in row]
                     if not any(cells):
                         continue
 
                     pairs = [f"{headers[i]}: {cells[i]}" for i in range(min(len(headers), len(cells))) if cells[i]]
-                    text = " | ".join(pairs)
+                    text = " | ".join(pairs) if pairs else ", ".join(cells)
 
-                    if len(text) < 10:
+                    if not text.strip():
                         continue
 
                     chunk_id = f"{filename}_row{row_idx}"
@@ -298,6 +341,27 @@ class IngestionEngine:
                             "bbox_x1": 562.0,
                             "bbox_y1": 100.0,
                             "block_no": row_idx,
+                            "format": "csv"
+                        }
+                    })
+
+                # Fallback if somehow no records were created but content exists
+                if not records and lines:
+                    records.append({
+                        "id": f"{filename}_fallback",
+                        "text": "\n".join(lines[:100]),
+                        "metadata": {
+                            "source": filename,
+                            "file_id": filename,
+                            "page": 1,
+                            "page_width": 612.0,
+                            "page_height": 792.0,
+                            "bbox": json.dumps([50.0, 50.0, 562.0, 100.0]),
+                            "bbox_x0": 50.0,
+                            "bbox_y0": 50.0,
+                            "bbox_x1": 562.0,
+                            "bbox_y1": 100.0,
+                            "block_no": 1,
                             "format": "csv"
                         }
                     })
@@ -399,18 +463,77 @@ class IngestionEngine:
 
         return records
 
+    def parse_docx(self, filepath: Path) -> List[Dict[str, Any]]:
+        """Extract paragraphs and tables from Word (.docx) documents."""
+        records = []
+        filename = filepath.name
+        if not DOCX_AVAILABLE:
+            logger.warning(f"python-docx unavailable for {filename}")
+            return records
+
+        try:
+            doc = docx.Document(str(filepath))
+            texts = []
+            for p in doc.paragraphs:
+                ptxt = p.text.strip()
+                if ptxt:
+                    texts.append(ptxt)
+            
+            for table in doc.tables:
+                for row in table.rows:
+                    row_cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                    if row_cells:
+                        texts.append(" | ".join(row_cells))
+
+            # Chunk into blocks
+            full_text = "\n\n".join(texts)
+            if full_text:
+                words = full_text.split()
+                chunk_size = 400
+                overlap = 50
+                step = chunk_size - overlap
+                for i in range(0, max(1, len(words)), step):
+                    chunk_words = words[i:i + chunk_size]
+                    if not chunk_words:
+                        break
+                    chunk_text = " ".join(chunk_words)
+                    records.append({
+                        "id": f"{filename}_chunk{i//step}",
+                        "text": chunk_text,
+                        "metadata": {
+                            "source": filename,
+                            "file_id": filename,
+                            "page": 1,
+                            "page_width": 612.0,
+                            "page_height": 792.0,
+                            "bbox": json.dumps([50.0, 50.0, 562.0, 100.0]),
+                            "bbox_x0": 50.0,
+                            "bbox_y0": 50.0,
+                            "bbox_x1": 562.0,
+                            "bbox_y1": 100.0,
+                            "block_no": i // step,
+                            "format": "docx"
+                        }
+                    })
+        except Exception as e:
+            logger.error(f"Error parsing docx {filepath}: {e}")
+
+        return records
+
     def ingest_single_file(self, filepath: Path) -> int:
         """
         Unified entry point for ingesting any supported document format.
         Routes to the appropriate parser based on file extension.
-        Supports: PDF, XLSX, CSV, PNG, JPG, JPEG, TIFF, BMP
+        Supports: PDF, XLSX, XLS, CSV, TSV, DOCX, PNG, JPG, JPEG, TIFF, BMP
         """
         ext = filepath.suffix.lower()
 
         if ext == ".pdf":
             chunks = self.parse_pdf(filepath)
-        elif ext in {".xlsx", ".csv"}:
+        elif ext in {".xlsx", ".xls", ".csv", ".tsv"}:
             chunks = self.parse_spreadsheet(filepath)
+        elif ext == ".docx":
+            chunks = self.parse_docx(filepath)
         elif ext in {".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp"}:
             chunks = self.parse_image_with_ocr(filepath)
         else:
